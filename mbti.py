@@ -1,3 +1,12 @@
+import streamlit as st
+
+# 페이지 기본 설정
+st.set_page_config(
+    page_title="MBTI 맞춤형 직업 추천",
+    page_icon="💼",
+    layout="centered"
+)
+
 # MBTI별 직업 데이터베이스
 mbti_careers = {
     "INTJ": {
@@ -49,7 +58,7 @@ mbti_careers = {
         "caution": "디테일 마무리 집착력 키우기, 일상적인 반복 업무에 대한 인내심"
     },
     "INFJ": {
-        "title": "선선의 옹호자",
+        "title": "선의의 옹호자",
         "style": "깊은 통찰력으로 사람들의 성장을 돕고 의미 있는 가치를 추구하는 지도자",
         "strengths": ["뛰어난 통찰력", "공감 능력", "확고한 신념"],
         "careers": {
@@ -194,40 +203,48 @@ mbti_careers = {
     }
 }
 
-def analyze_mbti(mbti_input: str):
-    """MBTI 유형을 입력받아 분석 결과를 출력하는 함수"""
-    mbti_code = mbti_input.strip().upper()
-    
-    if mbti_code not in mbti_careers:
-        print(f"\n[!] '{mbti_input}'은(는) 유효한 MBTI 유형이 아닙니다. (예: INFP, ENTP, ISTJ)")
-        return
+# 헤더 구성
+st.title("💼 MBTI 맞춤형 커리어 분석")
+st.write("당신의 MBTI 유형을 선택하여 적합한 직업과 커리어 가이드를 확인해보세요.")
 
-    data = mbti_careers[mbti_code]
-    
-    print("\n" + "=" * 60)
-    print(f"  📌 [{mbti_code}] {data['title']} - 맞춤 커리어 분석")
-    print("=" * 60)
-    
-    print(f"\n1. 업무 스타일")
-    print(f"   • {data['style']}")
-    
-    print(f"\n2. 대표 강점")
-    for strength in data['strengths']:
-        print(f"   ✓ {strength}")
-        
-    print(f"\n3. 추천 직업 분야 및 직무")
-    for category, jobs in data['careers'].items():
-        print(f"   • {category}: {', '.join(jobs)}")
-        
-    print(f"\n4. 최적의 근무 환경")
-    print(f"   • {data['environment']}")
-    
-    print(f"\n5. 커리어 주의점")
-    print(f"   • {data['caution']}")
-    print("=" * 60 + "\n")
+# 사용자 입력 (드롭다운 방식 적용으로 오타 방지)
+mbti_list = list(mbti_careers.keys())
+selected_mbti = st.selectbox("분석할 MBTI 유형을 선택하세요:", mbti_list, index=0)
 
-# 실행부
-if __name__ == "__main__":
-    print("=== MBTI 맞춤형 직업 추천 프로그램 ===")
-    user_mbti = input("분석할 MBTI 유형을 입력하세요 (예: ENTP): ")
-    analyze_mbti(user_mbti)
+# 결과 출력
+if st.button("분석 결과 보기", type="primary"):
+    data = mbti_careers[selected_mbti]
+    
+    st.divider()
+    st.subheader(f"📌 [{selected_mbti}] {data['title']}")
+    
+    st.markdown("### 1. 업무 스타일")
+    st.info(f"💡 {data['style']}")
+    
+    st.markdown("### 2. 대표 강점")
+    for s in data['strengths']:
+        st.write(f"- ✅ **{s}**")
+        
+    st.markdown("### 3. 추천 직업 분야")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.write("**💻 전문/기술**")
+        for job in data['careers']['전문/기술']:
+            st.write(f"• {job}")
+            
+    with col2:
+        st.write("**📊 기획/비즈니스**")
+        for job in data['careers']['기획/비즈니스']:
+            st.write(f"• {job}")
+            
+    with col3:
+        st.write("**🎨 창의/전문직**")
+        for job in data['careers']['창의/전문직']:
+            st.write(f"• {job}")
+            
+    st.markdown("### 4. 최적의 근무 환경")
+    st.success(f"🏢 {data['environment']}")
+    
+    st.markdown("### 5. 커리어 주의점")
+    st.warning(f"⚠️ {data['caution']}")
