@@ -37,7 +37,7 @@ game_html = """
         const ctx = canvas.getContext("2d");
 
         // -------------------------------------------------------------------
-        // 테마 및 사람 캐릭터 색상
+        // 테마 및 캐릭터 데이터
         // -------------------------------------------------------------------
         const bgThemes = [
             { name: "위험한 사이버시티 🏙️", sky: ["#0B0C10", "#1F2833"], ground: "#0B0C10", top: "#66FCF1" },
@@ -58,7 +58,7 @@ game_html = """
         let score = 0;
         let coins = 0;
         let frameCount = 0;
-        let sawRotation = 0; // 톱날 회전각
+        let sawRotation = 0;
 
         const groundY = 280;
         const NORMAL_HEIGHT = 60;
@@ -81,6 +81,7 @@ game_html = """
         const coinItems = [];
         const keys = {};
 
+        // 시작 화면 UI 버튼 좌표
         const buttons = {
             bgPrev: { x: 200, y: 130, w: 40, h: 30 },
             bgNext: { x: 460, y: 130, w: 40, h: 30 },
@@ -89,19 +90,29 @@ game_html = """
             play: { x: 275, y: 250, w: 150, h: 50 }
         };
 
+        // 게임 오버 메뉴 버튼 좌표
+        const gameOverButtons = {
+            retry: { x: 180, y: 240, w: 150, h: 45 },
+            menu: { x: 370, y: 240, w: 150, h: 45 }
+        };
+
         // -------------------------------------------------------------------
-        // 이벤트
+        // 이벤트 핸들러
         // -------------------------------------------------------------------
         window.addEventListener("keydown", function (e) {
-            if (["Space", "ArrowDown", "KeyS", "ArrowUp"].includes(e.code)) {
+            if (["Space", "ArrowDown", "KeyS", "ArrowUp", "KeyM"].includes(e.code)) {
                 e.preventDefault();
             }
             keys[e.code] = true;
 
             if (gameState === 'PLAYING' && (e.code === "Space" || e.code === "ArrowUp")) {
                 jump();
-            } else if (gameState === 'GAMEOVER' && e.code === "Space") {
-                resetGame();
+            } else if (gameState === 'GAMEOVER') {
+                if (e.code === "Space") {
+                    resetGame(); // 바로 다시 시작
+                } else if (e.code === "KeyM") {
+                    gameState = 'START'; // M 키 누르면 시작 메뉴로 이동
+                }
             }
         });
 
@@ -119,7 +130,7 @@ game_html = """
             } else if (gameState === 'PLAYING') {
                 jump();
             } else if (gameState === 'GAMEOVER') {
-                resetGame();
+                handleGameOverClick(clickX, clickY);
             }
         });
 
@@ -134,6 +145,14 @@ game_html = """
                 selectedRunnerIdx = (selectedRunnerIdx + 1) % runnerThemes.length;
             } else if (isInside(x, y, buttons.play)) {
                 startGame();
+            }
+        }
+
+        function handleGameOverClick(x, y) {
+            if (isInside(x, y, gameOverButtons.retry)) {
+                resetGame();
+            } else if (isInside(x, y, gameOverButtons.menu)) {
+                gameState = 'START'; // 메뉴 버튼 클릭 시 시작 화면으로
             }
         }
 
@@ -173,13 +192,12 @@ game_html = """
         }
 
         // -------------------------------------------------------------------
-        // 장애물 생성 (위험한 톱날 / 날카로운 가시)
+        // 로직 업데이트
         // -------------------------------------------------------------------
         function spawnObstacle() {
             const isDoubleJump = Math.random() < 0.5;
 
             if (isDoubleJump) {
-                // 🔥 회전하는 대형 위협 톱날 (2단 점프 전용, 너비 230px)
                 obstacles.push({
                     x: canvas.width,
                     y: groundY - 45,
@@ -188,7 +206,6 @@ game_html = """
                     type: "double_jump_saw"
                 });
             } else {
-                // 🟣 천장 가시 트랩 (슬라이딩 전용)
                 obstacles.push({
                     x: canvas.width,
                     y: groundY - 95,
@@ -213,9 +230,8 @@ game_html = """
 
             frameCount++;
             score++;
-            sawRotation += 0.2; // 톱날 회전 애니메이션
+            sawRotation += 0.2;
 
-            // 슬라이딩 동작
             const isDownPressed = keys["ArrowDown"] || keys["KeyS"];
             const isGrounded = runner.y + runner.height >= groundY - 1;
 
@@ -233,7 +249,6 @@ game_html = """
                 }
             }
 
-            // 중력 및 좌표 연산
             runner.dy += runner.gravity;
             runner.y += runner.dy;
 
@@ -246,12 +261,10 @@ game_html = """
             if (frameCount % 90 === 0) spawnObstacle();
             if (frameCount % 45 === 0) spawnCoin();
 
-            // 장애물 이동 및 히트박스 판정
             for (let i = obstacles.length - 1; i >= 0; i--) {
                 const obs = obstacles[i];
                 obs.x -= 7.5;
 
-                // 충돌 검사
                 if (
                     runner.x < obs.x + obs.width &&
                     runner.x + runner.width > obs.x &&
@@ -264,7 +277,6 @@ game_html = """
                 if (obs.x + obs.width < 0) obstacles.splice(i, 1);
             }
 
-            // 코인
             for (let i = coinItems.length - 1; i >= 0; i--) {
                 const c = coinItems[i];
                 c.x -= 7.5;
@@ -282,7 +294,7 @@ game_html = """
         }
 
         // -------------------------------------------------------------------
-        // 렌더링 (사람 관절 캐릭터 & 위험 장애물)
+        // 렌더링
         // -------------------------------------------------------------------
         function drawBackground() {
             const currentBg = bgThemes[selectedBgIdx];
@@ -292,17 +304,15 @@ game_html = """
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 바닥
             ctx.fillStyle = currentBg.ground;
             ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
             ctx.fillStyle = currentBg.top;
             ctx.fillRect(0, groundY, canvas.width, 10);
         }
 
-        // 🚶 사람 형태(Stickman / Human Runner) 그리기
         function drawHumanRunner() {
             const theme = runnerThemes[selectedRunnerIdx];
-            const rx = runner.x + 15; // 중심 X
+            const rx = runner.x + 15;
             const ry = runner.y;
 
             ctx.lineWidth = 4;
@@ -310,31 +320,26 @@ game_html = """
             ctx.fillStyle = theme.skin;
 
             if (runner.isSliding) {
-                // 엎드려서 슬라이딩하는 사람 포즈
-                // 머리
                 ctx.beginPath();
                 ctx.arc(rx + 15, ry + 10, 7, 0, Math.PI * 2);
                 ctx.fill();
-                // 몸통
+
                 ctx.beginPath();
                 ctx.moveTo(rx - 10, ry + 18);
                 ctx.lineTo(rx + 10, ry + 18);
                 ctx.stroke();
-                // 다리
+
                 ctx.beginPath();
                 ctx.moveTo(rx - 10, ry + 18);
                 ctx.lineTo(rx - 22, ry + 25);
                 ctx.stroke();
             } else {
-                // 달리기/점프하는 사람 포즈
-                const legSwing = Math.sin(frameCount * 0.3) * 12; // 달리 모션 연산
+                const legSwing = Math.sin(frameCount * 0.3) * 12;
 
-                // 1. 머리
                 ctx.beginPath();
                 ctx.arc(rx, ry + 8, 8, 0, Math.PI * 2);
                 ctx.fill();
 
-                // 2. 몸통 (슈트 스틸)
                 ctx.beginPath();
                 ctx.moveTo(rx, ry + 16);
                 ctx.lineTo(rx, ry + 38);
@@ -345,9 +350,7 @@ game_html = """
                 ctx.strokeStyle = theme.skin;
                 ctx.lineWidth = 4;
 
-                // 3. 다리 모션 (공중에 떠있으면 점프 포즈, 땅에서는 달리기 포즈)
                 if (runner.jumpCount > 0) {
-                    // 점프 포즈 (무릎을 구부림)
                     ctx.beginPath();
                     ctx.moveTo(rx, ry + 38);
                     ctx.lineTo(rx - 10, ry + 48);
@@ -357,7 +360,6 @@ game_html = """
                     ctx.lineTo(rx + 8, ry + 58);
                     ctx.stroke();
                 } else {
-                    // 달리기 연산
                     ctx.beginPath();
                     ctx.moveTo(rx, ry + 38);
                     ctx.lineTo(rx + legSwing, ry + 48);
@@ -369,7 +371,6 @@ game_html = """
                     ctx.stroke();
                 }
 
-                // 4. 팔 모션
                 ctx.beginPath();
                 ctx.moveTo(rx, ry + 20);
                 ctx.lineTo(rx - legSwing, ry + 30);
@@ -379,11 +380,9 @@ game_html = """
             }
         }
 
-        // ⚙️ 위험한 장애물 (회전 톱날 & 가시 트랩) 그리기
         function drawDangerousObstacles() {
             obstacles.forEach(obs => {
                 if (obs.type === "double_jump_saw") {
-                    // 💥 위험한 연쇄 회전 톱날 (3개 톱날 배치)
                     const sawCount = 3;
                     const radius = 22;
                     const spacing = obs.width / sawCount;
@@ -396,7 +395,6 @@ game_html = """
                         ctx.translate(cx, cy);
                         ctx.rotate(sawRotation + i);
 
-                        // 톱날 외형
                         ctx.fillStyle = "#FF1744";
                         ctx.beginPath();
                         for (let j = 0; j < 8; j++) {
@@ -408,7 +406,6 @@ game_html = """
                         ctx.closePath();
                         ctx.fill();
 
-                        // 중심 휠
                         ctx.fillStyle = "#FFF";
                         ctx.beginPath();
                         ctx.arc(0, 0, 5, 0, Math.PI * 2);
@@ -417,21 +414,17 @@ game_html = """
                         ctx.restore();
                     }
 
-                    // 경고 텍스트
                     ctx.fillStyle = "#FF1744";
                     ctx.font = "bold 13px Arial";
                     ctx.fillText("⚠️ DANGER: 2단 점프!", obs.x + 35, obs.y - 8);
 
                 } else if (obs.type === "spike_ceiling") {
-                    // 💥 날카로운 천장 가시 트랩
                     ctx.fillStyle = "#D500F9";
                     const spikeWidth = 10;
                     const numSpikes = obs.width / spikeWidth;
 
-                    // 위쪽 지지대
                     ctx.fillRect(obs.x, obs.y, obs.width, 10);
 
-                    // 삼각 가시 그리기
                     ctx.beginPath();
                     for (let i = 0; i < numSpikes; i++) {
                         const sx = obs.x + (i * spikeWidth);
@@ -503,13 +496,9 @@ game_html = """
         function drawGame() {
             drawBackground();
 
-            // 관절 캐릭터 그리기
             drawHumanRunner();
-
-            // 위험 장애물 그리기
             drawDangerousObstacles();
 
-            // 코인
             ctx.fillStyle = "#FFD700";
             coinItems.forEach(c => {
                 ctx.beginPath();
@@ -517,25 +506,49 @@ game_html = """
                 ctx.fill();
             });
 
-            // 점수 UI
             ctx.fillStyle = "#FFF";
             ctx.font = "bold 18px Arial";
             ctx.fillText(`Score: ${score}`, 20, 35);
             ctx.fillText(`Coins: 🟡 ${coins}`, 20, 60);
 
-            // 게임 오버
+            // 게임 오버 레이어 및 선택 버튼
             if (gameState === 'GAMEOVER') {
                 ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                 ctx.fillStyle = "#FF1744";
-                ctx.font = "bold 40px Arial";
+                ctx.font = "bold 38px Arial";
                 ctx.textAlign = "center";
-                ctx.fillText("DESTROYED!", canvas.width / 2, canvas.height / 2 - 20);
+                ctx.fillText("DESTROYED!", canvas.width / 2, canvas.height / 2 - 40);
+
+                ctx.fillStyle = "#AAA";
+                ctx.font = "16px Arial";
+                ctx.fillText(`최종 점수: ${score}  |  코인: ${coins}`, canvas.width / 2, canvas.height / 2 - 5);
+
+                // 1. 다시 시작 버튼
+                const rBtn = gameOverButtons.retry;
+                ctx.fillStyle = "#FF1744";
+                ctx.beginPath();
+                ctx.roundRect(rBtn.x, rBtn.y, rBtn.w, rBtn.h, 8);
+                ctx.fill();
 
                 ctx.fillStyle = "#FFF";
-                ctx.font = "18px Arial";
-                ctx.fillText("Space 키를 눌러 재도전", canvas.width / 2, canvas.height / 2 + 20);
+                ctx.font = "bold 16px Arial";
+                ctx.fillText("🔄 다시 도전 (Space)", rBtn.x + 75, rBtn.y + 28);
+
+                // 2. 캐릭터/배경 변경 메뉴 버튼
+                const mBtn = gameOverButtons.menu;
+                ctx.fillStyle = "#444";
+                ctx.beginPath();
+                ctx.roundRect(mBtn.x, mBtn.y, mBtn.w, mBtn.h, 8);
+                ctx.fill();
+                ctx.strokeStyle = "#888";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = "#FFF";
+                ctx.fillText("⚙️ 설정 변경 (M)", mBtn.x + 75, mBtn.y + 28);
+
                 ctx.textAlign = "left";
             }
         }
@@ -560,10 +573,8 @@ components.html(game_html, height=380)
 
 st.markdown("""
 ---
-### 🎮 업데이트 요소
-1. **사람 형태 러너 (Stickman / Human Runner):** 
-   - 러닝 애니메이션, 점프 포즈, 슬라이딩 포즈가 실시간으로 적용됩니다.
-2. **위험한 장애물 비주얼:**
-   - ⚙️ **회전하는 대형 톱날 트랩:** $230\text{px}$ 너비의 붉은색 톱날로, 최고점에서 정확히 **2단 점프**를 해야 넘을 수 있습니다.
-   - 💜 **날카로운 가시 천장 트랩:** **`↓(아래 화살표)`** / **`S`** 키로 엎드려 통과해야 합니다.
+### 🔄 변경 및 새로 적용된 기능
+- **게임 오버 시 설정 변경 옵션 추가:**
+  1. **`⚙️ 설정 변경` 버튼 클릭** 또는 **`M` 키 누르기** ➔ **시작 화면(메뉴)으로 이동**하여 배경과 캐릭터 변경
+  2. **`🔄 다시 도전` 버튼 클릭** 또는 **`Space` 키 누르기** ➔ 바로 게임 재시작
 """)
