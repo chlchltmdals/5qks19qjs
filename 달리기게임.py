@@ -36,19 +36,30 @@ game_html = """
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
+        // 누적 코인 및 해금 데이터 (로컬 저장소 저장)
+        let totalCoins = parseInt(localStorage.getItem("dash_runner_total_coins")) || 0;
+        let unlockedBgs = JSON.parse(localStorage.getItem("dash_runner_unlocked_bgs")) || [0, 1, 2];
+        let unlockedRunners = JSON.parse(localStorage.getItem("dash_runner_unlocked_runners")) || [0, 1, 2];
+
         // -------------------------------------------------------------------
         // 테마 및 캐릭터 데이터
         // -------------------------------------------------------------------
         const bgThemes = [
-            { name: "위험한 사이버시티 🏙️", sky: ["#0B0C10", "#1F2833"], ground: "#0B0C10", top: "#66FCF1" },
-            { name: "지옥의 용암 지대 🌋", sky: ["#1A0000", "#4A0000"], ground: "#110000", top: "#FF3300" },
-            { name: "심야의 폐공장 🏭", sky: ["#141E30", "#243B55"], ground: "#0F171E", top: "#FFD700" }
+            { name: "위험한 사이버시티 🏙️", sky: ["#0B0C10", "#1F2833"], ground: "#0B0C10", top: "#66FCF1", price: 0 },
+            { name: "지옥의 용암 지대 🌋", sky: ["#1A0000", "#4A0000"], ground: "#110000", top: "#FF3300", price: 0 },
+            { name: "심야의 폐공장 🏭", sky: ["#141E30", "#243B55"], ground: "#0F171E", top: "#FFD700", price: 0 },
+            { name: "사이보그 랩 🧪", sky: ["#002B11", "#005C29"], ground: "#001408", top: "#00FF66", price: 150 },
+            { name: "네온 우주 공간 🌌", sky: ["#050014", "#190033"], ground: "#0A001F", top: "#D500F9", price: 300 },
+            { name: "초시공 차원 🔮", sky: ["#1A0022", "#3D0052"], ground: "#0D0012", top: "#00E5FF", price: 500 }
         ];
 
         const runnerThemes = [
-            { name: "네온 아머 🏃", skin: "#66FCF1", suit: "#1F2833" },
-            { name: "샤이니 스파크 ⚡", skin: "#FFD700", suit: "#FF4500" },
-            { name: "섀도우 에이전트 🥷", skin: "#E0E0E0", suit: "#FF0055" }
+            { name: "네온 아머 🏃", skin: "#66FCF1", suit: "#1F2833", eye: "#000", price: 0 },
+            { name: "샤이니 스파크 ⚡", skin: "#FFD700", suit: "#FF4500", eye: "#000", price: 0 },
+            { name: "섀도우 에이전트 🥷", skin: "#E0E0E0", suit: "#FF0055", eye: "#000", price: 0 },
+            { name: "골든 타이탄 🏆", skin: "#FFF", suit: "#FFD700", eye: "#000", price: 200 },
+            { name: "크리스탈 파사드 🧊", skin: "#E0F7FA", suit: "#00E5FF", eye: "#000", price: 350 },
+            { name: "인페르노 스파크 🔥", skin: "#FFD700", suit: "#D50000", eye: "#000", price: 600 }
         ];
 
         let selectedBgIdx = 0;
@@ -67,7 +78,7 @@ game_html = """
         const runner = {
             x: 80,
             y: groundY - NORMAL_HEIGHT,
-            width: 30,
+            width: 34,
             height: NORMAL_HEIGHT,
             dy: 0,
             gravity: 0.65,
@@ -81,20 +92,26 @@ game_html = """
         const coinItems = [];
         const keys = {};
 
-        // 시작 화면 UI 버튼 좌표
         const buttons = {
-            bgPrev: { x: 200, y: 130, w: 40, h: 30 },
-            bgNext: { x: 460, y: 130, w: 40, h: 30 },
-            runnerPrev: { x: 200, y: 190, w: 40, h: 30 },
-            runnerNext: { x: 460, y: 190, w: 40, h: 30 },
-            play: { x: 275, y: 250, w: 150, h: 50 }
+            bgPrev: { x: 180, y: 125, w: 35, h: 32 },
+            bgNext: { x: 470, y: 125, w: 35, h: 32 },
+            bgBuy: { x: 515, y: 125, w: 90, h: 32 },
+            runnerPrev: { x: 180, y: 175, w: 35, h: 32 },
+            runnerNext: { x: 470, y: 175, w: 35, h: 32 },
+            runnerBuy: { x: 515, y: 175, w: 90, h: 32 },
+            play: { x: 260, y: 250, w: 180, h: 50 }
         };
 
-        // 게임 오버 메뉴 버튼 좌표
         const gameOverButtons = {
             retry: { x: 180, y: 240, w: 150, h: 45 },
             menu: { x: 370, y: 240, w: 150, h: 45 }
         };
+
+        function saveStorage() {
+            localStorage.setItem("dash_runner_total_coins", totalCoins);
+            localStorage.setItem("dash_runner_unlocked_bgs", JSON.stringify(unlockedBgs));
+            localStorage.setItem("dash_runner_unlocked_runners", JSON.stringify(unlockedRunners));
+        }
 
         // -------------------------------------------------------------------
         // 이벤트 핸들러
@@ -109,9 +126,9 @@ game_html = """
                 jump();
             } else if (gameState === 'GAMEOVER') {
                 if (e.code === "Space") {
-                    resetGame(); // 바로 다시 시작
+                    resetGame();
                 } else if (e.code === "KeyM") {
-                    gameState = 'START'; // M 키 누르면 시작 메뉴로 이동
+                    gameState = 'START';
                 }
             }
         });
@@ -139,12 +156,28 @@ game_html = """
                 selectedBgIdx = (selectedBgIdx - 1 + bgThemes.length) % bgThemes.length;
             } else if (isInside(x, y, buttons.bgNext)) {
                 selectedBgIdx = (selectedBgIdx + 1) % bgThemes.length;
+            } else if (isInside(x, y, buttons.bgBuy)) {
+                const item = bgThemes[selectedBgIdx];
+                if (!unlockedBgs.includes(selectedBgIdx) && totalCoins >= item.price) {
+                    totalCoins -= item.price;
+                    unlockedBgs.push(selectedBgIdx);
+                    saveStorage();
+                }
             } else if (isInside(x, y, buttons.runnerPrev)) {
                 selectedRunnerIdx = (selectedRunnerIdx - 1 + runnerThemes.length) % runnerThemes.length;
             } else if (isInside(x, y, buttons.runnerNext)) {
                 selectedRunnerIdx = (selectedRunnerIdx + 1) % runnerThemes.length;
+            } else if (isInside(x, y, buttons.runnerBuy)) {
+                const item = runnerThemes[selectedRunnerIdx];
+                if (!unlockedRunners.includes(selectedRunnerIdx) && totalCoins >= item.price) {
+                    totalCoins -= item.price;
+                    unlockedRunners.push(selectedRunnerIdx);
+                    saveStorage();
+                }
             } else if (isInside(x, y, buttons.play)) {
-                startGame();
+                if (unlockedBgs.includes(selectedBgIdx) && unlockedRunners.includes(selectedRunnerIdx)) {
+                    startGame();
+                }
             }
         }
 
@@ -152,7 +185,7 @@ game_html = """
             if (isInside(x, y, gameOverButtons.retry)) {
                 resetGame();
             } else if (isInside(x, y, gameOverButtons.menu)) {
-                gameState = 'START'; // 메뉴 버튼 클릭 시 시작 화면으로
+                gameState = 'START';
             }
         }
 
@@ -208,9 +241,9 @@ game_html = """
             } else {
                 obstacles.push({
                     x: canvas.width,
-                    y: groundY - 95,
-                    width: 50,
-                    height: 60,
+                    y: 0,
+                    width: 60,
+                    height: groundY - SLIDE_HEIGHT,
                     type: "spike_ceiling"
                 });
             }
@@ -271,6 +304,8 @@ game_html = """
                     runner.y < obs.y + obs.height &&
                     runner.y + runner.height > obs.y
                 ) {
+                    totalCoins += coins;
+                    saveStorage();
                     gameState = 'GAMEOVER';
                 }
 
@@ -294,7 +329,7 @@ game_html = """
         }
 
         // -------------------------------------------------------------------
-        // 렌더링
+        // 렌더링 (두꺼워진 사람 캐릭터 & 얼굴 이목구비)
         // -------------------------------------------------------------------
         function drawBackground() {
             const currentBg = bgThemes[selectedBgIdx];
@@ -310,72 +345,117 @@ game_html = """
             ctx.fillRect(0, groundY, canvas.width, 10);
         }
 
+        // 👤 더 두껍고 이목구비가 있는 사람 캐릭터 그리기
         function drawHumanRunner() {
             const theme = runnerThemes[selectedRunnerIdx];
-            const rx = runner.x + 15;
+            const rx = runner.x + 17;
             const ry = runner.y;
 
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = theme.skin;
-            ctx.fillStyle = theme.skin;
-
             if (runner.isSliding) {
+                // --- 엎드린 슬라이딩 포즈 ---
+                // 1. 머리 (크게 확대)
+                ctx.fillStyle = theme.skin;
                 ctx.beginPath();
-                ctx.arc(rx + 15, ry + 10, 7, 0, Math.PI * 2);
+                ctx.arc(rx + 20, ry + 12, 11, 0, Math.PI * 2);
                 ctx.fill();
 
+                // 2. 눈 (놀란 동공 표정 ⊙_⊙)
+                ctx.fillStyle = "#000";
                 ctx.beginPath();
-                ctx.moveTo(rx - 10, ry + 18);
-                ctx.lineTo(rx + 10, ry + 18);
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.moveTo(rx - 10, ry + 18);
-                ctx.lineTo(rx - 22, ry + 25);
-                ctx.stroke();
-            } else {
-                const legSwing = Math.sin(frameCount * 0.3) * 12;
-
-                ctx.beginPath();
-                ctx.arc(rx, ry + 8, 8, 0, Math.PI * 2);
+                ctx.arc(rx + 24, ry + 10, 3, 0, Math.PI * 2); // 큰 눈
+                ctx.arc(rx + 28, ry + 10, 2, 0, Math.PI * 2);
                 ctx.fill();
 
+                // 3. 두꺼운 몸통
+                ctx.fillStyle = theme.suit;
                 ctx.beginPath();
-                ctx.moveTo(rx, ry + 16);
-                ctx.lineTo(rx, ry + 38);
+                ctx.roundRect(rx - 15, ry + 12, 28, 14, 6);
+                ctx.fill();
+
+                // 4. 두꺼운 다리
                 ctx.strokeStyle = theme.suit;
-                ctx.lineWidth = 6;
+                ctx.lineWidth = 8;
+                ctx.lineCap = "round";
+                ctx.beginPath();
+                ctx.moveTo(rx - 12, ry + 20);
+                ctx.lineTo(rx - 28, ry + 26);
                 ctx.stroke();
 
-                ctx.strokeStyle = theme.skin;
-                ctx.lineWidth = 4;
+            } else {
+                // --- 달리기 / 점프 포즈 ---
+                const legSwing = Math.sin(frameCount * 0.3) * 14;
 
+                // 1. 두꺼운 몸통 (볼륨감 있는 수트)
+                ctx.fillStyle = theme.suit;
+                ctx.beginPath();
+                ctx.roundRect(rx - 9, ry + 18, 18, 22, 6);
+                ctx.fill();
+
+                // 2. 머리 (피부색 + 큰 두상)
+                ctx.fillStyle = theme.skin;
+                ctx.beginPath();
+                ctx.arc(rx, ry + 10, 11, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 3. 얼굴 이목구비 (달리는 방향 바라보는 눈 & 표정)
+                ctx.fillStyle = theme.eye;
                 if (runner.jumpCount > 0) {
+                    // 점프 시 (깜짝 놀란 눈)
                     ctx.beginPath();
-                    ctx.moveTo(rx, ry + 38);
-                    ctx.lineTo(rx - 10, ry + 48);
-                    ctx.lineTo(rx - 5, ry + 58);
-                    ctx.moveTo(rx, ry + 38);
-                    ctx.lineTo(rx + 12, ry + 48);
-                    ctx.lineTo(rx + 8, ry + 58);
-                    ctx.stroke();
+                    ctx.arc(rx + 4, ry + 8, 3, 0, Math.PI * 2);
+                    ctx.arc(rx + 8, ry + 8, 2, 0, Math.PI * 2);
+                    ctx.fill();
                 } else {
+                    // 기본 달리기 (집중한 눈)
                     ctx.beginPath();
-                    ctx.moveTo(rx, ry + 38);
-                    ctx.lineTo(rx + legSwing, ry + 48);
-                    ctx.lineTo(rx + legSwing * 1.2, ry + 58);
-
-                    ctx.moveTo(rx, ry + 38);
-                    ctx.lineTo(rx - legSwing, ry + 48);
-                    ctx.lineTo(rx - legSwing * 1.2, ry + 58);
+                    ctx.arc(rx + 5, ry + 9, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    // 입
+                    ctx.strokeStyle = theme.eye;
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.arc(rx + 4, ry + 13, 3, 0, Math.PI * 0.8);
                     ctx.stroke();
                 }
 
+                ctx.strokeStyle = theme.suit;
+                ctx.lineWidth = 7.5; // 두꺼운 관절 두께
+                ctx.lineCap = "round";
+
+                // 4. 두꺼운 다리 (점프 vs 달리기 모션)
+                if (runner.jumpCount > 0) {
+                    // 점프 다리 포즈
+                    ctx.beginPath();
+                    ctx.moveTo(rx - 4, ry + 38);
+                    ctx.lineTo(rx - 12, ry + 48);
+                    ctx.lineTo(rx - 6, ry + 58);
+
+                    ctx.moveTo(rx + 4, ry + 38);
+                    ctx.lineTo(rx + 14, ry + 48);
+                    ctx.lineTo(rx + 8, ry + 58);
+                    ctx.stroke();
+                } else {
+                    // 달리기 다리 모션
+                    ctx.beginPath();
+                    ctx.moveTo(rx - 3, ry + 38);
+                    ctx.lineTo(rx + legSwing, ry + 48);
+                    ctx.lineTo(rx + legSwing * 1.1, ry + 58);
+
+                    ctx.moveTo(rx + 3, ry + 38);
+                    ctx.lineTo(rx - legSwing, ry + 48);
+                    ctx.lineTo(rx - legSwing * 1.1, ry + 58);
+                    ctx.stroke();
+                }
+
+                // 5. 두꺼운 팔 모션
+                ctx.strokeStyle = theme.skin;
+                ctx.lineWidth = 6;
                 ctx.beginPath();
-                ctx.moveTo(rx, ry + 20);
-                ctx.lineTo(rx - legSwing, ry + 30);
-                ctx.moveTo(rx, ry + 20);
-                ctx.lineTo(rx + legSwing, ry + 30);
+                ctx.moveTo(rx, ry + 22);
+                ctx.lineTo(rx - legSwing * 0.9, ry + 32);
+
+                ctx.moveTo(rx, ry + 22);
+                ctx.lineTo(rx + legSwing * 0.9, ry + 32);
                 ctx.stroke();
             }
         }
@@ -420,23 +500,23 @@ game_html = """
 
                 } else if (obs.type === "spike_ceiling") {
                     ctx.fillStyle = "#D500F9";
+                    ctx.fillRect(obs.x, 0, obs.width, obs.height - 15);
+
                     const spikeWidth = 10;
                     const numSpikes = obs.width / spikeWidth;
-
-                    ctx.fillRect(obs.x, obs.y, obs.width, 10);
 
                     ctx.beginPath();
                     for (let i = 0; i < numSpikes; i++) {
                         const sx = obs.x + (i * spikeWidth);
-                        ctx.moveTo(sx, obs.y + 10);
-                        ctx.lineTo(sx + spikeWidth / 2, obs.y + obs.height);
-                        ctx.lineTo(sx + spikeWidth, obs.y + 10);
+                        ctx.moveTo(sx, obs.height - 15);
+                        ctx.lineTo(sx + spikeWidth / 2, obs.height);
+                        ctx.lineTo(sx + spikeWidth + 0.5, obs.height - 15);
                     }
                     ctx.fill();
 
-                    ctx.fillStyle = "#D500F9";
-                    ctx.font = "bold 11px Arial";
-                    ctx.fillText("SLIDE!", obs.x + 5, obs.y - 6);
+                    ctx.fillStyle = "#FFF";
+                    ctx.font = "bold 12px Arial";
+                    ctx.fillText("⬇️ ONLY SLIDE!", obs.x - 15, obs.height / 2);
                 }
             });
         }
@@ -444,40 +524,52 @@ game_html = """
         function drawStartMenu() {
             drawBackground();
 
-            ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+            ctx.fillStyle = "rgba(0, 0, 0, 0.78)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             ctx.fillStyle = "#FF1744";
-            ctx.font = "bold 34px Arial";
+            ctx.font = "bold 32px Arial";
             ctx.textAlign = "center";
-            ctx.fillText("⚡ DASH RUNNER: EXTREME ⚡", canvas.width / 2, 70);
+            ctx.fillText("⚡ DASH RUNNER: EXTREME ⚡", canvas.width / 2, 48);
 
-            ctx.font = "bold 15px Arial";
-            ctx.fillStyle = "#FFF";
+            ctx.fillStyle = "#FFD700";
+            ctx.font = "bold 16px Arial";
+            ctx.fillText(`💰 보유 코인: ${totalCoins} G`, canvas.width / 2, 82);
 
-            drawSelector("스테이지", bgThemes[selectedBgIdx].name, 130, buttons.bgPrev, buttons.bgNext);
-            drawSelector("러너 수트", runnerThemes[selectedRunnerIdx].name, 190, buttons.runnerPrev, buttons.runnerNext);
+            ctx.textAlign = "left";
+            drawSelector("스테이지", bgThemes, selectedBgIdx, unlockedBgs, 125, buttons.bgPrev, buttons.bgNext, buttons.bgBuy);
+            drawSelector("러너 수트", runnerThemes, selectedRunnerIdx, unlockedRunners, 175, buttons.runnerPrev, buttons.runnerNext, buttons.runnerBuy);
 
             const btn = buttons.play;
-            ctx.fillStyle = "#FF1744";
+            const isBgUnlocked = unlockedBgs.includes(selectedBgIdx);
+            const isRunnerUnlocked = unlockedRunners.includes(selectedRunnerIdx);
+            const canStart = isBgUnlocked && isRunnerUnlocked;
+
+            ctx.fillStyle = canStart ? "#FF1744" : "#555";
             ctx.beginPath();
             ctx.roundRect(btn.x, btn.y, btn.w, btn.h, 12);
             ctx.fill();
-            ctx.strokeStyle = "#FFF";
-            ctx.lineWidth = 3;
-            ctx.stroke();
+            if (canStart) {
+                ctx.strokeStyle = "#FFF";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
 
             ctx.fillStyle = "#FFF";
-            ctx.font = "bold 24px Arial";
-            ctx.fillText("▶ START", canvas.width / 2, btn.y + 33);
+            ctx.font = "bold 22px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(canStart ? "▶ START" : "🔒 구매 후 시작 가능", canvas.width / 2, btn.y + 33);
 
             ctx.textAlign = "left";
         }
 
-        function drawSelector(label, value, y, prevBtn, nextBtn) {
+        function drawSelector(label, list, selectedIdx, unlockedList, y, prevBtn, nextBtn, buyBtn) {
+            const item = list[selectedIdx];
+            const isUnlocked = unlockedList.includes(selectedIdx);
+
             ctx.fillStyle = "#FFF";
             ctx.font = "bold 15px Arial";
-            ctx.fillText(`${label}:`, 120, y + 20);
+            ctx.fillText(`${label}:`, 70, y + 21);
 
             ctx.fillStyle = "#333";
             ctx.beginPath();
@@ -486,11 +578,24 @@ game_html = """
             ctx.fill();
 
             ctx.fillStyle = "#FFF";
-            ctx.fillText("<", prevBtn.x + 14, prevBtn.y + 20);
-            ctx.fillText(">", nextBtn.x + 14, nextBtn.y + 20);
+            ctx.font = "bold 15px Arial";
+            ctx.fillText("<", prevBtn.x + 12, prevBtn.y + 21);
+            ctx.fillText(">", nextBtn.x + 12, nextBtn.y + 21);
 
-            ctx.fillStyle = "#FFD700";
-            ctx.fillText(value, 260, y + 20);
+            ctx.fillStyle = isUnlocked ? "#FFD700" : "#AAA";
+            ctx.fillText(`${item.name} ${isUnlocked ? '' : '🔒'}`, 225, y + 21);
+
+            if (!isUnlocked) {
+                const canAfford = totalCoins >= item.price;
+                ctx.fillStyle = canAfford ? "#2E7D32" : "#777";
+                ctx.beginPath();
+                ctx.roundRect(buyBtn.x, buyBtn.y, buyBtn.w, buyBtn.h, 5);
+                ctx.fill();
+
+                ctx.fillStyle = "#FFF";
+                ctx.font = "bold 12px Arial";
+                ctx.fillText(`구매 (${item.price}G)`, buyBtn.x + 8, buyBtn.y + 20);
+            }
         }
 
         function drawGame() {
@@ -509,9 +614,8 @@ game_html = """
             ctx.fillStyle = "#FFF";
             ctx.font = "bold 18px Arial";
             ctx.fillText(`Score: ${score}`, 20, 35);
-            ctx.fillText(`Coins: 🟡 ${coins}`, 20, 60);
+            ctx.fillText(`Coins: 🟡 +${coins}`, 20, 60);
 
-            // 게임 오버 레이어 및 선택 버튼
             if (gameState === 'GAMEOVER') {
                 ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -523,9 +627,8 @@ game_html = """
 
                 ctx.fillStyle = "#AAA";
                 ctx.font = "16px Arial";
-                ctx.fillText(`최종 점수: ${score}  |  코인: ${coins}`, canvas.width / 2, canvas.height / 2 - 5);
+                ctx.fillText(`획득 점수: ${score}  |  획득 코인: +${coins} G`, canvas.width / 2, canvas.height / 2 - 5);
 
-                // 1. 다시 시작 버튼
                 const rBtn = gameOverButtons.retry;
                 ctx.fillStyle = "#FF1744";
                 ctx.beginPath();
@@ -536,7 +639,6 @@ game_html = """
                 ctx.font = "bold 16px Arial";
                 ctx.fillText("🔄 다시 도전 (Space)", rBtn.x + 75, rBtn.y + 28);
 
-                // 2. 캐릭터/배경 변경 메뉴 버튼
                 const mBtn = gameOverButtons.menu;
                 ctx.fillStyle = "#444";
                 ctx.beginPath();
@@ -547,7 +649,7 @@ game_html = """
                 ctx.stroke();
 
                 ctx.fillStyle = "#FFF";
-                ctx.fillText("⚙️ 설정 변경 (M)", mBtn.x + 75, mBtn.y + 28);
+                ctx.fillText("⚙️ 상점 / 메뉴 (M)", mBtn.x + 75, mBtn.y + 28);
 
                 ctx.textAlign = "left";
             }
@@ -570,11 +672,3 @@ game_html = """
 """
 
 components.html(game_html, height=380)
-
-st.markdown("""
----
-### 🔄 변경 및 새로 적용된 기능
-- **게임 오버 시 설정 변경 옵션 추가:**
-  1. **`⚙️ 설정 변경` 버튼 클릭** 또는 **`M` 키 누르기** ➔ **시작 화면(메뉴)으로 이동**하여 배경과 캐릭터 변경
-  2. **`🔄 다시 도전` 버튼 클릭** 또는 **`Space` 키 누르기** ➔ 바로 게임 재시작
-""")
