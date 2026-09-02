@@ -269,7 +269,6 @@ function spawnObjects() {
         let rand = Math.random();
         let type = rand < 0.4 ? 'spike' : (rand < 0.7 ? 'saw' : 'high_saw');
         
-        // [수정점 1] high_saw의 Y축 위치를 210으로 조절하여 점프로 못 넘고 무조건 슬라이딩으로만 통과 가능하게 설정
         obstacles.push({
             x: 1000,
             y: type === 'spike' ? 390 : (type === 'saw' ? 350 : 210),
@@ -283,9 +282,11 @@ function spawnObjects() {
         pits.push({ x: 1000, width: 100 });
     }
 
-    if (gameFrame % 170 === 0) {
+    // [수정점] 아이템 스폰 주기 단축(170->100) 및 물약/코인 비중 확대
+    if (gameFrame % 100 === 0) {
         let rand = Math.random();
-        let itemType = rand < 0.6 ? 'coin' : (rand < 0.85 ? 'heal' : 'giant');
+        // 물약 45%, 코인 45%, 거대화 10%
+        let itemType = rand < 0.45 ? 'heal' : (rand < 0.90 ? 'coin' : 'giant');
         items.push({
             x: 1000,
             y: itemType === 'coin' ? 260 + Math.random() * 80 : 320,
@@ -637,11 +638,15 @@ function update() {
             pBox.y + pBox.height > item.y
         ) {
             if (item.type === 'coin') {
-                sessionCoins += 1;
-                totalCoins += 1;
+                // [수정점] 코인 하나당 획득량을 3개로 증가
+                sessionCoins += 3;
+                totalCoins += 3;
                 saveUserData();
             }
-            if (item.type === 'heal') hp = Math.min(100, hp + 20);
+            if (item.type === 'heal') {
+                // [수정점] 회복량을 20에서 35로 상향
+                hp = Math.min(100, hp + 35);
+            }
             if (item.type === 'giant') {
                 player.isGiant = true;
                 player.giantTimer = 300;
@@ -698,7 +703,6 @@ function draw() {
             ctx.fill();
             ctx.restore();
 
-            // 슬라이딩 전용 장해물(상단 체인/지지대)
             if (obs.type === 'high_saw') {
                 ctx.fillStyle = '#485460';
                 ctx.fillRect(obs.x + obs.width / 2 - 3, 0, 6, obs.y + 80);
@@ -730,23 +734,18 @@ function draw() {
             ctx.fillText('$', item.x + 8, item.y + 16);
             ctx.shadowBlur = 0;
         } else if (item.type === 'heal') {
-            // [수정점 2] 예쁜 유리 물약병(체력 포션) 디자인
             ctx.save();
             ctx.translate(item.x + 15, item.y + 15);
             
-            // 붉은 후광 효과
             ctx.shadowColor = '#ff4757';
             ctx.shadowBlur = 12;
 
-            // 물약병 마개 (코르크 마개)
             ctx.fillStyle = '#a4b0be';
             ctx.fillRect(-4, -16, 8, 4);
 
-            // 물약병 주둥이
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(-6, -12, 12, 3);
 
-            // 유리병 몸통 (라운드 플라스크 형태)
             ctx.beginPath();
             ctx.arc(0, 3, 13, 0, Math.PI * 2);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
@@ -755,7 +754,6 @@ function draw() {
             ctx.lineWidth = 1.5;
             ctx.stroke();
 
-            // 액체 (살짝 흔들리는 붉은 물약)
             ctx.beginPath();
             let wave = Math.sin(gameFrame * 0.1) * 2;
             ctx.arc(0, 3, 11, 0.1 * Math.PI, 0.9 * Math.PI, false);
@@ -763,7 +761,6 @@ function draw() {
             ctx.fillStyle = '#ff4757';
             ctx.fill();
 
-            // 포션 빛 하이라이트
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.arc(-4, -2, 3, 0, Math.PI * 2);
