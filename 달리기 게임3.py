@@ -182,7 +182,6 @@ let obstacles = [];
 let pits = [];
 let items = [];
 
-// [수정점] S 키 추가 입력 처리
 window.addEventListener('keydown', (e) => {
     if (!gameRunning || gameOver) return;
     if ((e.code === 'Space' || e.code === 'ArrowUp') && player.jumpCount < player.maxJumps && !player.isSliding) {
@@ -283,7 +282,6 @@ function spawnObjects() {
         pits.push({ x: 1000, width: 100 });
     }
 
-    // [수정점] 물약 비율 감소 (물약 20%, 코인 70%, 거대화 10%)
     if (gameFrame % 110 === 0) {
         let rand = Math.random();
         let itemType = rand < 0.20 ? 'heal' : (rand < 0.90 ? 'coin' : 'giant');
@@ -643,7 +641,8 @@ function update() {
                 saveUserData();
             }
             if (item.type === 'heal') {
-                hp = Math.min(100, hp + 35);
+                // [수정점] 물약 회복량 감소 (35 -> 15)
+                hp = Math.min(100, hp + 15);
             }
             if (item.type === 'giant') {
                 player.isGiant = true;
@@ -671,6 +670,191 @@ function update() {
     spawnObjects();
 }
 
+// [수정점] 배경 테마별 커스텀 장애물 그리기 함수
+function drawObstacle(obs) {
+    ctx.save();
+    let cx = obs.x + obs.width / 2;
+
+    if (currentBg === 0) {
+        // --- [테마 0: 푸른 초원] ---
+        if (obs.type === 'spike') {
+            // 나무 울타리 가시
+            ctx.fillStyle = '#8e582e';
+            ctx.fillRect(obs.x + 5, obs.y + 15, obs.width - 10, obs.height - 15);
+            ctx.fillStyle = '#6d3f1e';
+            for (let i = 0; i < 3; i++) {
+                let px = obs.x + i * 13 + 3;
+                ctx.beginPath();
+                ctx.moveTo(px, obs.y + 15);
+                ctx.lineTo(px + 6, obs.y);
+                ctx.lineTo(px + 12, obs.y + 15);
+                ctx.fill();
+            }
+        } else if (obs.type === 'saw') {
+            // 풍차 날개 (바닥)
+            ctx.translate(cx, obs.y + 20);
+            ctx.rotate(gameFrame * 0.1);
+            ctx.fillStyle = '#78e08f';
+            for (let i = 0; i < 4; i++) {
+                ctx.rotate(Math.PI / 2);
+                ctx.beginPath();
+                ctx.arc(12, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.fillStyle = '#38ada9';
+            ctx.beginPath();
+            ctx.arc(0, 0, 7, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (obs.type === 'high_saw') {
+            // 줄에 매달린 구름 바위
+            ctx.strokeStyle = '#b2bec3';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx, 0);
+            ctx.lineTo(cx, obs.y + 30);
+            ctx.stroke();
+
+            ctx.fillStyle = '#636e72';
+            ctx.shadowColor = '#2d3436';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(cx, obs.y + 40, 22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // 스파이크 돌기
+            ctx.fillStyle = '#d63031';
+            for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
+                let sx = cx + Math.cos(a) * 22;
+                let sy = (obs.y + 40) + Math.sin(a) * 22;
+                ctx.beginPath();
+                ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+    } else if (currentBg === 1) {
+        // --- [테마 1: 별빛 시티] ---
+        if (obs.type === 'spike') {
+            // 사이버 바리케이드 / 콘
+            ctx.fillStyle = '#ff3838';
+            ctx.beginPath();
+            ctx.moveTo(obs.x + 5, obs.y + obs.height);
+            ctx.lineTo(cx, obs.y);
+            ctx.lineTo(obs.x + obs.width - 5, obs.y + obs.height);
+            ctx.fill();
+            // 네온 하이라이트
+            ctx.fillStyle = '#fff200';
+            ctx.fillRect(obs.x + 12, obs.y + 15, obs.width - 24, 6);
+            ctx.shadowColor = '#ff3838';
+            ctx.shadowBlur = 10;
+            ctx.strokeStyle = '#ff4d4d';
+            ctx.strokeRect(obs.x + 3, obs.y + obs.height - 4, obs.width - 6, 4);
+            ctx.shadowBlur = 0;
+        } else if (obs.type === 'saw') {
+            // 네온 서큘러 톱날
+            ctx.translate(cx, obs.y + 20);
+            ctx.rotate(-gameFrame * 0.2);
+            ctx.fillStyle = '#17c0eb';
+            ctx.shadowColor = '#17c0eb';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                ctx.rotate(Math.PI / 4);
+                ctx.lineTo(22, 0);
+                ctx.lineTo(10, 8);
+            }
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(0, 0, 6, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (obs.type === 'high_saw') {
+            // 드론 & 레이저 빔
+            ctx.fillStyle = '#3d3d3d';
+            ctx.fillRect(cx - 20, obs.y + 10, 40, 15);
+            ctx.fillStyle = '#718093';
+            ctx.fillRect(cx - 12, obs.y + 5, 24, 6);
+
+            // 드론 눈
+            ctx.fillStyle = '#ff3838';
+            ctx.shadowColor = '#ff3838';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(cx, obs.y + 17, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 아래 레이저
+            ctx.fillStyle = 'rgba(255, 56, 56, 0.7)';
+            ctx.fillRect(cx - 4, obs.y + 25, 8, obs.height - 25);
+            ctx.shadowBlur = 0;
+        }
+
+    } else if (currentBg === 2) {
+        // --- [테마 2: 노을 산맥] ---
+        if (obs.type === 'spike') {
+            // 용암 암석
+            ctx.fillStyle = '#2c0b0e';
+            ctx.beginPath();
+            ctx.moveTo(obs.x, obs.y + obs.height);
+            ctx.lineTo(obs.x + 10, obs.y + 8);
+            ctx.lineTo(cx, obs.y + 20);
+            ctx.lineTo(obs.x + obs.width - 8, obs.y);
+            ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
+            ctx.fill();
+
+            ctx.fillStyle = '#ff5252';
+            ctx.shadowColor = '#ff5252';
+            ctx.shadowBlur = 8;
+            ctx.fillRect(obs.x + 8, obs.y + 22, 6, 3);
+            ctx.fillRect(obs.x + 22, obs.y + 14, 8, 3);
+            ctx.shadowBlur = 0;
+        } else if (obs.type === 'saw') {
+            // 불타는 회전 톱날
+            ctx.translate(cx, obs.y + 20);
+            ctx.rotate(gameFrame * 0.18);
+            ctx.fillStyle = '#ff726f';
+            ctx.shadowColor = '#ff5252';
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                ctx.rotate(Math.PI / 3);
+                ctx.lineTo(25, 0);
+                ctx.lineTo(8, 12);
+            }
+            ctx.fill();
+            ctx.fillStyle = '#ffda79';
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        } else if (obs.type === 'high_saw') {
+            // 용암 쇠사슬 구
+            ctx.strokeStyle = '#ffb142';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(cx, 0);
+            ctx.lineTo(cx, obs.y + 50);
+            ctx.stroke();
+
+            ctx.fillStyle = '#cc8e35';
+            ctx.shadowColor = '#ff5252';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(cx, obs.y + 60, 22, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ff5252';
+            ctx.beginPath();
+            ctx.arc(cx, obs.y + 60, 14, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+    }
+    ctx.restore();
+}
+
 function draw() {
     drawBackground();
 
@@ -682,41 +866,9 @@ function draw() {
         ctx.fillRect(pit.x + pit.width - 5, 430, 5, 70);
     });
 
+    // 배경 테마에 맞춘 장애물 렌더링
     obstacles.forEach(obs => {
-        if (obs.type === 'saw' || obs.type === 'high_saw') {
-            ctx.save();
-            ctx.translate(obs.x + obs.width / 2, obs.y + (obs.type === 'high_saw' ? 80 : 20));
-            ctx.rotate(gameFrame * 0.15);
-            ctx.fillStyle = obs.type === 'high_saw' ? '#ff3838' : '#718093';
-            ctx.beginPath();
-            for (let i = 0; i < 8; i++) {
-                ctx.rotate(Math.PI / 4);
-                ctx.lineTo(24, 0);
-                ctx.lineTo(12, 6);
-            }
-            ctx.fill();
-            ctx.fillStyle = '#f5f6fa';
-            ctx.beginPath();
-            ctx.arc(0, 0, 7, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-
-            if (obs.type === 'high_saw') {
-                ctx.fillStyle = '#485460';
-                ctx.fillRect(obs.x + obs.width / 2 - 3, 0, 6, obs.y + 80);
-            }
-        } else {
-            ctx.fillStyle = '#ff4757';
-            ctx.beginPath();
-            ctx.moveTo(obs.x, obs.y + obs.height);
-            ctx.lineTo(obs.x + obs.width / 2, obs.y);
-            ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
-            ctx.closePath();
-            ctx.fill();
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-        }
+        drawObstacle(obs);
     });
 
     items.forEach(item => {
