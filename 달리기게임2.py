@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Dash Runner", page_icon="🏃", layout="centered")
+st.set_page_config(page_title="Dash Runner", page_icon="🏃", layout="wide")
 
 game_html = """
 <!DOCTYPE html>
@@ -10,42 +10,42 @@ game_html = """
     <meta charset="utf-8">
     <style>
         body { margin: 0; padding: 0; background-color: #1a1a2e; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        #gameContainer { position: relative; width: 800px; height: 400px; box-shadow: 0 12px 30px rgba(0,0,0,0.7); border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.1); background: #000; }
+        #gameContainer { position: relative; width: 1000px; height: 500px; box-shadow: 0 12px 30px rgba(0,0,0,0.7); border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.1); background: #000; }
         
         /* 전체화면 스타일 설정 */
         #gameContainer:fullscreen { width: 100vw; height: 100vh; border-radius: 0; border: none; display: flex; justify-content: center; align-items: center; }
         #gameContainer:-webkit-full-screen { width: 100vw; height: 100vh; border-radius: 0; border: none; display: flex; justify-content: center; align-items: center; }
         
-        canvas { display: block; }
+        canvas { display: block; width: 100%; height: 100%; }
         
-        #uiOverlay { position: absolute; top: 12px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 800; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); z-index: 5; letter-spacing: 0.5px; }
-        .hp-bar-bg { width: 140px; height: 16px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px; overflow: hidden; display: inline-block; vertical-align: middle; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+        #uiOverlay { position: absolute; top: 15px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 17px; font-weight: 800; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); z-index: 5; letter-spacing: 0.5px; }
+        .hp-bar-bg { width: 180px; height: 20px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px; overflow: hidden; display: inline-block; vertical-align: middle; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
         .hp-bar-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #ff4757, #ff6b81); transition: width 0.1s; }
         
-        .fullscreen-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; font-size: 18px; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; margin-left: 10px; }
+        .fullscreen-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; font-size: 20px; width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; margin-left: 15px; }
         .fullscreen-btn:hover { background: rgba(255,255,255,0.4); transform: scale(1.08); }
 
         .overlay-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 15, 26, 0.88); backdrop-filter: blur(4px); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 10; }
-        .overlay-screen h1 { font-size: 44px; color: #fbc531; margin-bottom: 15px; text-shadow: 0 4px 10px rgba(251, 197, 49, 0.4); font-weight: 900; letter-spacing: 2px; }
-        .btn { padding: 12px 24px; font-size: 16px; background: linear-gradient(135deg, #2ed573, #26af5f); border: none; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 6px; transition: 0.2s; box-shadow: 0 4px 12px rgba(46, 213, 115, 0.3); }
+        .overlay-screen h1 { font-size: 52px; color: #fbc531; margin-bottom: 20px; text-shadow: 0 4px 10px rgba(251, 197, 49, 0.4); font-weight: 900; letter-spacing: 2px; }
+        .btn { padding: 14px 28px; font-size: 18px; background: linear-gradient(135deg, #2ed573, #26af5f); border: none; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 8px; transition: 0.2s; box-shadow: 0 4px 12px rgba(46, 213, 115, 0.3); }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(46, 213, 115, 0.5); }
         .btn-shop { background: linear-gradient(135deg, #e1b12c, #c89a1c); box-shadow: 0 4px 12px rgba(225, 177, 44, 0.3); }
-        .btn-shop:hover { box-shadow: 0 6px 16px rgba(225, 177, 44, 0.5); }
+        .btn-shop:hover { shadow: 0 6px 16px rgba(225, 177, 44, 0.5); }
         
         /* 상점 UI */
         #shopScreen { display: none; }
-        .shop-container { display: flex; gap: 20px; margin-bottom: 20px; }
-        .shop-box { background: rgba(255,255,255,0.06); padding: 18px; border-radius: 12px; text-align: center; width: 220px; border: 1px solid rgba(255,255,255,0.1); }
-        .shop-box h3 { margin-top: 0; color: #fbc531; font-size: 18px; }
-        .shop-item { margin: 10px 0; padding: 8px 10px; background: rgba(0,0,0,0.4); border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
-        .shop-item button { padding: 5px 10px; font-size: 12px; cursor: pointer; border-radius: 4px; border: none; font-weight: bold; background: #70a1ff; color: white; }
+        .shop-container { display: flex; gap: 30px; margin-bottom: 25px; }
+        .shop-box { background: rgba(255,255,255,0.06); padding: 22px; border-radius: 12px; text-align: center; width: 260px; border: 1px solid rgba(255,255,255,0.1); }
+        .shop-box h3 { margin-top: 0; color: #fbc531; font-size: 20px; }
+        .shop-item { margin: 12px 0; padding: 10px 12px; background: rgba(0,0,0,0.4); border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .shop-item button { padding: 6px 12px; font-size: 13px; cursor: pointer; border-radius: 4px; border: none; font-weight: bold; background: #70a1ff; color: white; }
         .shop-item button:disabled { background: #57606f; cursor: default; }
     </style>
 </head>
 <body>
 
 <div id="gameContainer">
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <canvas id="gameCanvas" width="1000" height="500"></canvas>
     
     <div id="uiOverlay">
         <div>
@@ -67,7 +67,7 @@ game_html = """
     <!-- 상점 메뉴 -->
     <div id="shopScreen" class="overlay-screen">
         <h1>ITEM SHOP</h1>
-        <p>보유 누적 코인: <span id="shopCoinText" style="color: #fbc531; font-weight: bold;">0</span></p>
+        <p style="font-size: 18px;">보유 누적 코인: <span id="shopCoinText" style="color: #fbc531; font-weight: bold;">0</span></p>
         <div class="shop-container">
             <div class="shop-box">
                 <h3>배경 테마</h3>
@@ -106,8 +106,8 @@ game_html = """
     <!-- 게임 오버 -->
     <div id="gameOverScreen" class="overlay-screen" style="display: none;">
         <h1 style="color: #ff4757; text-shadow: 0 4px 10px rgba(255,71,87,0.4);">GAME OVER</h1>
-        <p style="font-size: 18px;">최종 점수: <span id="finalScore" style="color: #fbc531;">0</span> | 획득 코인: <span id="finalCoins" style="color: #eccc68;">0</span></p>
-        <div style="margin-top: 10px;">
+        <p style="font-size: 20px;">최종 점수: <span id="finalScore" style="color: #fbc531;">0</span> | 획득 코인: <span id="finalCoins" style="color: #eccc68;">0</span></p>
+        <div style="margin-top: 15px;">
             <button class="btn" onclick="resetGame()">다시 시작</button>
             <button class="btn btn-shop" onclick="returnToMenu()">메인 메뉴</button>
         </div>
@@ -155,21 +155,21 @@ let gameRunning = false;
 let gameFrame = 0;
 
 const clouds = [
-    { x: 50, y: 50, speed: 0.5, scale: 0.8 },
-    { x: 300, y: 80, speed: 0.3, scale: 1.2 },
-    { x: 600, y: 40, speed: 0.6, scale: 1.0 }
+    { x: 50, y: 60, speed: 0.5, scale: 1.0 },
+    { x: 400, y: 100, speed: 0.3, scale: 1.4 },
+    { x: 800, y: 50, speed: 0.6, scale: 1.2 }
 ];
 
-const stars = Array.from({ length: 40 }, () => ({
-    x: Math.random() * 800,
-    y: Math.random() * 200,
-    size: Math.random() * 2 + 1,
+const stars = Array.from({ length: 50 }, () => ({
+    x: Math.random() * 1000,
+    y: Math.random() * 250,
+    size: Math.random() * 2.5 + 1,
     alpha: Math.random()
 }));
 
 const player = {
-    x: 100,
-    y: 280,
+    x: 120,
+    y: 360,
     width: 40,
     height: 70,
     vy: 0,
@@ -189,7 +189,7 @@ let items = [];
 window.addEventListener('keydown', (e) => {
     if (!gameRunning || gameOver) return;
     if ((e.code === 'Space' || e.code === 'ArrowUp') && player.jumpCount < player.maxJumps && !player.isSliding) {
-        player.vy = -12;
+        player.vy = -12.5;
         player.jumpCount++;
     }
     if (e.code === 'ArrowDown' && player.jumpCount === 0) {
@@ -273,8 +273,8 @@ function spawnObjects() {
         let rand = Math.random();
         let type = rand < 0.4 ? 'spike' : (rand < 0.7 ? 'saw' : 'high_saw');
         obstacles.push({
-            x: 800,
-            y: type === 'spike' ? 310 : (type === 'saw' ? 270 : 220),
+            x: 1000,
+            y: type === 'spike' ? 390 : (type === 'saw' ? 350 : 290),
             width: 40,
             height: 40,
             type: type
@@ -282,15 +282,15 @@ function spawnObjects() {
     }
 
     if (gameFrame % 280 === 0 && Math.random() < 0.6) {
-        pits.push({ x: 800, width: 90 });
+        pits.push({ x: 1000, width: 100 });
     }
 
     if (gameFrame % 170 === 0) {
         let rand = Math.random();
         let itemType = rand < 0.6 ? 'coin' : (rand < 0.85 ? 'heal' : 'giant');
         items.push({
-            x: 800,
-            y: itemType === 'coin' ? 200 + Math.random() * 60 : 250,
+            x: 1000,
+            y: itemType === 'coin' ? 260 + Math.random() * 80 : 320,
             width: 25,
             height: 25,
             type: itemType
@@ -300,27 +300,27 @@ function spawnObjects() {
 
 function drawBackground() {
     if (currentBg === 0) {
-        let skyGradient = ctx.createLinearGradient(0, 0, 0, 350);
+        let skyGradient = ctx.createLinearGradient(0, 0, 0, 430);
         skyGradient.addColorStop(0, '#54a0ff');
         skyGradient.addColorStop(1, '#74b9ff');
         ctx.fillStyle = skyGradient;
-        ctx.fillRect(0, 0, 800, 350);
+        ctx.fillRect(0, 0, 1000, 430);
 
         ctx.fillStyle = '#55efc4';
-        let mountainOffset = (gameFrame * 0.5) % 400;
+        let mountainOffset = (gameFrame * 0.5) % 500;
         ctx.beginPath();
-        ctx.moveTo(0 - mountainOffset, 350);
+        ctx.moveTo(0 - mountainOffset, 430);
         for (let i = -1; i <= 3; i++) {
-            let cx = i * 400 - mountainOffset;
-            ctx.quadraticCurveTo(cx + 100, 220, cx + 200, 350);
-            ctx.quadraticCurveTo(cx + 300, 260, cx + 400, 350);
+            let cx = i * 500 - mountainOffset;
+            ctx.quadraticCurveTo(cx + 125, 280, cx + 250, 430);
+            ctx.quadraticCurveTo(cx + 375, 320, cx + 500, 430);
         }
         ctx.fill();
 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
         clouds.forEach(cloud => {
             if (gameRunning) cloud.x -= cloud.speed;
-            if (cloud.x < -100) cloud.x = 850;
+            if (cloud.x < -120) cloud.x = 1050;
             ctx.beginPath();
             ctx.arc(cloud.x, cloud.y, 20 * cloud.scale, 0, Math.PI * 2);
             ctx.arc(cloud.x + 15 * cloud.scale, cloud.y - 10 * cloud.scale, 25 * cloud.scale, 0, Math.PI * 2);
@@ -329,11 +329,11 @@ function drawBackground() {
         });
 
     } else if (currentBg === 1) {
-        let skyGradient = ctx.createLinearGradient(0, 0, 0, 350);
+        let skyGradient = ctx.createLinearGradient(0, 0, 0, 430);
         skyGradient.addColorStop(0, '#0c2461');
         skyGradient.addColorStop(1, '#1e3799');
         ctx.fillStyle = skyGradient;
-        ctx.fillRect(0, 0, 800, 350);
+        ctx.fillRect(0, 0, 1000, 430);
 
         stars.forEach(star => {
             ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + Math.sin(gameFrame * 0.05 + star.x) * 0.4})`;
@@ -344,63 +344,63 @@ function drawBackground() {
         ctx.shadowColor = '#f8c291';
         ctx.shadowBlur = 15;
         ctx.beginPath();
-        ctx.arc(700, 70, 30, 0, Math.PI * 2);
+        ctx.arc(880, 80, 35, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
 
         ctx.fillStyle = '#0a192f';
-        let cityOffset = (gameFrame * 0.8) % 300;
+        let cityOffset = (gameFrame * 0.8) % 350;
         for (let i = -1; i < 4; i++) {
-            let bx = i * 300 - cityOffset;
-            ctx.fillRect(bx + 10, 180, 40, 170);
-            ctx.fillRect(bx + 60, 130, 55, 220);
-            ctx.fillRect(bx + 125, 210, 45, 140);
-            ctx.fillRect(bx + 180, 150, 70, 200);
+            let bx = i * 350 - cityOffset;
+            ctx.fillRect(bx + 10, 220, 50, 210);
+            ctx.fillRect(bx + 75, 160, 65, 270);
+            ctx.fillRect(bx + 155, 250, 55, 180);
+            ctx.fillRect(bx + 225, 180, 85, 250);
 
             ctx.fillStyle = '#f6b93b';
-            for (let wy = 150; wy < 320; wy += 25) {
-                if ((i + wy) % 2 === 0) ctx.fillRect(bx + 72, wy, 8, 12);
-                if ((i + wy) % 3 === 0) ctx.fillRect(bx + 195, wy + 10, 8, 12);
+            for (let wy = 180; wy < 400; wy += 30) {
+                if ((i + wy) % 2 === 0) ctx.fillRect(bx + 88, wy, 10, 14);
+                if ((i + wy) % 3 === 0) ctx.fillRect(bx + 245, wy + 10, 10, 14);
             }
             ctx.fillStyle = '#0a192f';
         }
 
     } else if (currentBg === 2) {
-        let skyGradient = ctx.createLinearGradient(0, 0, 0, 350);
+        let skyGradient = ctx.createLinearGradient(0, 0, 0, 430);
         skyGradient.addColorStop(0, '#b71540');
         skyGradient.addColorStop(0.5, '#e55039');
         skyGradient.addColorStop(1, '#f6b93b');
         ctx.fillStyle = skyGradient;
-        ctx.fillRect(0, 0, 800, 350);
+        ctx.fillRect(0, 0, 1000, 430);
 
         ctx.fillStyle = '#ffda79';
         ctx.shadowColor = '#ffda79';
         ctx.shadowBlur = 25;
         ctx.beginPath();
-        ctx.arc(400, 220, 50, 0, Math.PI * 2);
+        ctx.arc(500, 280, 60, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
 
         ctx.fillStyle = 'rgba(78, 15, 30, 0.6)';
-        let mountOffset1 = (gameFrame * 0.3) % 600;
+        let mountOffset1 = (gameFrame * 0.3) % 700;
         ctx.beginPath();
-        ctx.moveTo(-mountOffset1, 350);
-        ctx.lineTo(150 - mountOffset1, 180);
-        ctx.lineTo(350 - mountOffset1, 350);
-        ctx.lineTo(500 - mountOffset1, 210);
-        ctx.lineTo(750 - mountOffset1, 350);
-        ctx.lineTo(1000 - mountOffset1, 350);
+        ctx.moveTo(-mountOffset1, 430);
+        ctx.lineTo(200 - mountOffset1, 220);
+        ctx.lineTo(450 - mountOffset1, 430);
+        ctx.lineTo(650 - mountOffset1, 260);
+        ctx.lineTo(950 - mountOffset1, 430);
+        ctx.lineTo(1300 - mountOffset1, 430);
         ctx.fill();
 
         ctx.fillStyle = '#2c0b0e';
-        let mountOffset2 = (gameFrame * 0.7) % 500;
+        let mountOffset2 = (gameFrame * 0.7) % 600;
         ctx.beginPath();
-        ctx.moveTo(-mountOffset2, 350);
-        ctx.lineTo(100 - mountOffset2, 240);
-        ctx.lineTo(250 - mountOffset2, 350);
-        ctx.lineTo(400 - mountOffset2, 220);
-        ctx.lineTo(600 - mountOffset2, 350);
-        ctx.lineTo(850 - mountOffset2, 350);
+        ctx.moveTo(-mountOffset2, 430);
+        ctx.lineTo(130 - mountOffset2, 300);
+        ctx.lineTo(320 - mountOffset2, 430);
+        ctx.lineTo(520 - mountOffset2, 280);
+        ctx.lineTo(750 - mountOffset2, 430);
+        ctx.lineTo(1100 - mountOffset2, 430);
         ctx.fill();
     }
 
@@ -408,16 +408,16 @@ function drawBackground() {
     let dirtColor = currentBg === 0 ? '#b8e994' : (currentBg === 1 ? '#0f171e' : '#218c74');
 
     ctx.fillStyle = groundColor;
-    ctx.fillRect(0, 350, 800, 12);
+    ctx.fillRect(0, 430, 1000, 15);
 
     ctx.fillStyle = dirtColor;
-    ctx.fillRect(0, 362, 800, 38);
+    ctx.fillRect(0, 445, 1000, 55);
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-    let groundLineOffset = (gameFrame * 6) % 40;
-    for (let x = -40; x < 840; x += 40) {
-        ctx.fillRect(x - groundLineOffset, 368, 20, 4);
-        ctx.fillRect(x - groundLineOffset + 15, 382, 10, 4);
+    let groundLineOffset = (gameFrame * 6) % 50;
+    for (let x = -50; x < 1050; x += 50) {
+        ctx.fillRect(x - groundLineOffset, 452, 25, 5);
+        ctx.fillRect(x - groundLineOffset + 20, 470, 12, 5);
     }
 }
 
@@ -492,7 +492,7 @@ function drawPlayer() {
         ctx.fill();
     } else {
         let runCycle = gameFrame * 0.2;
-        let isAir = player.y < 280;
+        let isAir = player.y < 360;
 
         let bobbing = isAir ? 0 : Math.sin(runCycle * 2) * 4 * scale;
         
@@ -559,13 +559,13 @@ function update() {
         }
     });
 
-    if (player.y >= 280) {
+    if (player.y >= 360) {
         if (overPit) {
-            if (player.y > 380) {
+            if (player.y > 480) {
                 hp = 0;
             }
         } else {
-            player.y = 280;
+            player.y = 360;
             player.vy = 0;
             player.jumpCount = 0;
         }
@@ -668,10 +668,10 @@ function draw() {
 
     pits.forEach(pit => {
         ctx.fillStyle = '#0f0f1a';
-        ctx.fillRect(pit.x, 350, pit.width, 50);
+        ctx.fillRect(pit.x, 430, pit.width, 70);
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(pit.x, 350, 4, 50);
-        ctx.fillRect(pit.x + pit.width - 4, 350, 4, 50);
+        ctx.fillRect(pit.x, 430, 5, 70);
+        ctx.fillRect(pit.x + pit.width - 5, 430, 5, 70);
     });
 
     obstacles.forEach(obs => {
@@ -750,7 +750,7 @@ function resetGame() {
     hp = 100;
     gameOver = false;
     gameFrame = 0;
-    player.y = 280;
+    player.y = 360;
     player.vy = 0;
     player.isGiant = false;
     player.giantTimer = 0;
@@ -768,5 +768,5 @@ gameLoop();
 </html>
 """
 
-# components.html의 allow="fullscreen" 속성 지정
-components.html(game_html, height=450)
+# 화면에 조화롭게 들어가도록 세로 높이를 550으로 확장
+components.html(game_html, height=550)
