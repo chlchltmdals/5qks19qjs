@@ -1,16 +1,13 @@
-import math
-import time
-import random
 import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Dash Runner", page_icon="🏃", layout="centered")
 
-# HTML/JS 게임 엔진
 game_html = """
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8">
     <style>
         body { margin: 0; padding: 0; background-color: #222; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         #gameContainer { position: relative; width: 800px; height: 400px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); border-radius: 8px; overflow: hidden; }
@@ -44,14 +41,12 @@ game_html = """
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// 게임 상태
 let score = 0;
 let coins = 0;
 let hp = 100;
 let gameOver = false;
 let gameFrame = 0;
 
-// 캐릭터 상태
 const player = {
     x: 100,
     y: 280,
@@ -63,15 +58,13 @@ const player = {
     maxJumps: 2,
     isSliding: false,
     giantTimer: 0,
-    invincibleTimer: 0, // 거대화 종료 후 무적 타이머 (60프레임 = 1초)
+    invincibleTimer: 0,
     isGiant: false
 };
 
-// 장애물 및 아이템 배열
 let obstacles = [];
 let items = [];
 
-// 키 입력 이벤트
 window.addEventListener('keydown', (e) => {
     if (gameOver) return;
     if ((e.code === 'Space' || e.code === 'ArrowUp') && player.jumpCount < player.maxJumps && !player.isSliding) {
@@ -90,7 +83,6 @@ window.addEventListener('keyup', (e) => {
 });
 
 function spawnObjects() {
-    // 장애물 생성 (가시/톱날)
     if (gameFrame % 120 === 0) {
         let type = Math.random() < 0.5 ? 'saw' : 'spike';
         obstacles.push({
@@ -102,7 +94,6 @@ function spawnObjects() {
         });
     }
 
-    // 아이템 생성 (코인/힐포션/거대화)
     if (gameFrame % 180 === 0) {
         let rand = Math.random();
         let itemType = rand < 0.6 ? 'coin' : (rand < 0.85 ? 'heal' : 'giant');
@@ -116,11 +107,47 @@ function spawnObjects() {
     }
 }
 
-// 고급 캐릭터 그리기 (디테일 표현 + 자연스러운 러닝 애니메이션)
+function drawLeg(ctx, hipAngle, kneeAngle, scale, color) {
+    ctx.save();
+    ctx.translate(0, -24 * scale);
+    ctx.rotate(hipAngle);
+
+    ctx.fillStyle = color;
+    ctx.fillRect(-4 * scale, 0, 8 * scale, 15 * scale);
+
+    ctx.translate(0, 13 * scale);
+    ctx.rotate(kneeAngle);
+    ctx.fillRect(-3.5 * scale, 0, 7 * scale, 14 * scale);
+
+    ctx.fillStyle = "#1e272e";
+    ctx.fillRect(-3.5 * scale, 12 * scale, 10 * scale, 5 * scale);
+
+    ctx.restore();
+}
+
+function drawArm(ctx, angle, scale, color) {
+    ctx.save();
+    ctx.translate(0, -48 * scale);
+    ctx.rotate(angle);
+
+    ctx.fillStyle = color;
+    ctx.fillRect(-3 * scale, 0, 6 * scale, 13 * scale);
+
+    ctx.translate(0, 11 * scale);
+    ctx.rotate(0.4);
+    ctx.fillRect(-2.5 * scale, 0, 5 * scale, 12 * scale);
+
+    ctx.fillStyle = "#ffdbac";
+    ctx.beginPath();
+    ctx.arc(0, 12 * scale, 3 * scale, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
 function drawPlayer() {
     ctx.save();
     
-    // 무적 상태 시 깜빡임 효과 (거대화 해제 후 1초간)
     if (player.invincibleTimer > 0 && Math.floor(player.invincibleTimer / 5) % 2 === 0) {
         ctx.globalAlpha = 0.4;
     }
@@ -135,117 +162,57 @@ function drawPlayer() {
     ctx.translate(renderX, renderY);
 
     if (player.isSliding) {
-        // 슬라이딩 연출
         ctx.fillStyle = "#ff4757";
         ctx.beginPath();
         ctx.ellipse(-10, -15, 30 * scale, 15 * scale, 0, 0, Math.PI * 2);
         ctx.fill();
-        // 머리
         ctx.fillStyle = "#ffdbac";
         ctx.beginPath();
         ctx.arc(15 * scale, -20 * scale, 10 * scale, 0, Math.PI * 2);
         ctx.fill();
     } else {
-        // 달리기 사이클 조절 (Sin/Cos 주기 이용)
         let runCycle = gameFrame * 0.2;
         let isAir = player.y < 280;
 
-        // 바운스 효과 (몸통 높낮이)
         let bobbing = isAir ? 0 : Math.sin(runCycle * 2) * 4 * scale;
         
-        // 관절 회전 각도 (자연스러운 교차 회전)
         let hipAngle1 = isAir ? -0.4 : Math.sin(runCycle) * 0.8;
         let hipAngle2 = isAir ? 0.6 : -Math.sin(runCycle) * 0.8;
         let kneeAngle1 = isAir ? 0.8 : Math.max(0, Math.sin(runCycle + 1.2) * 0.9);
         let kneeAngle2 = isAir ? 0.3 : Math.max(0, -Math.sin(runCycle + 1.2) * 0.9);
 
-        let shoulderAngle1 = isAir ? 0.5 : -Math.sin(runCycle) * 0.7; // 왼팔 (골반과 반대)
-        let shoulderAngle2 = isAir ? -0.5 : Math.sin(runCycle) * 0.7;  // 오른팔
+        let shoulderAngle1 = isAir ? 0.5 : -Math.sin(runCycle) * 0.7;
+        let shoulderAngle2 = isAir ? -0.5 : Math.sin(runCycle) * 0.7;
 
         ctx.translate(0, -bobbing);
 
-        // --- 1. 뒷다리 (Left Leg) ---
         drawLeg(ctx, hipAngle2, kneeAngle2, scale, "#2f3542");
-
-        // --- 2. 왼팔 (Behind Arm) ---
         drawArm(ctx, shoulderAngle2, scale, "#e1b12c");
 
-        // --- 3. 몸통 (Torso) & 옷 디테일 ---
-        ctx.fillStyle = "#fbc531"; // 셔츠
+        ctx.fillStyle = "#fbc531";
         ctx.fillRect(-10 * scale, -52 * scale, 20 * scale, 26 * scale);
-        // 벨트
         ctx.fillStyle = "#2f3542";
         ctx.fillRect(-10 * scale, -28 * scale, 20 * scale, 4 * scale);
 
-        // --- 4. 머리 및 얼굴 디테일 ---
         let headY = -63 * scale;
-        // 얼굴 피부
         ctx.fillStyle = "#ffdbac";
         ctx.beginPath();
         ctx.arc(0, headY, 11 * scale, 0, Math.PI * 2);
         ctx.fill();
-        // 헤어 스타일
+
         ctx.fillStyle = "#485460";
         ctx.beginPath();
         ctx.arc(0, headY - 2 * scale, 12 * scale, Math.PI * 0.8, Math.PI * 2.2);
         ctx.fill();
-        // 눈 & 입
+
         ctx.fillStyle = "#000";
-        ctx.fillRect(4 * scale, headY - 2 * scale, 3 * scale, 3 * scale); // 눈
+        ctx.fillRect(4 * scale, headY - 2 * scale, 3 * scale, 3 * scale);
         ctx.fillStyle = "#e84118";
-        ctx.fillRect(4 * scale, headY + 4 * scale, 4 * scale, 2 * scale); // 입
+        ctx.fillRect(4 * scale, headY + 4 * scale, 4 * scale, 2 * scale);
 
-        // --- 5. 앞다리 (Right Leg) ---
         drawLeg(ctx, hipAngle1, kneeAngle1, scale, "#57606f");
-
-        // --- 6. 오른팔 (Front Arm) ---
         drawArm(ctx, shoulderAngle1, scale, "#fbc531");
     }
-
-    ctx.restore();
-}
-
-// 2관절 다리 그리기 함수
-function drawLeg(ctx, hipAngle, kneeAngle, scale, color) {
-    ctx.save();
-    ctx.translate(0, -24 * scale);
-    ctx.rotate(hipAngle);
-
-    // 허벅지
-    ctx.fillStyle = color;
-    ctx.fillRect(-4 * scale, 0, 8 * scale, 15 * scale);
-
-    // 종아리
-    ctx.translate(0, 13 * scale);
-    ctx.rotate(kneeAngle);
-    ctx.fillRect(-3.5 * scale, 0, 7 * scale, 14 * scale);
-
-    // 신발
-    ctx.fillStyle = "#1e272e";
-    ctx.fillRect(-3.5 * scale, 12 * scale, 10 * scale, 5 * scale);
-
-    ctx.restore();
-}
-
-// 팔 그리기 함수
-function drawArm(ctx, angle, scale, color) {
-    ctx.save();
-    ctx.translate(0, -48 * scale);
-    ctx.rotate(angle);
-
-    ctx.fillStyle = color;
-    ctx.fillRect(-3 * scale, 0, 6 * scale, 13 * scale);
-
-    // 전완 (팔꿈치 아래)
-    ctx.translate(0, 11 * scale);
-    ctx.rotate(0.4); // 자연스러운 굽힘
-    ctx.fillRect(-2.5 * scale, 0, 5 * scale, 12 * scale);
-
-    // 손
-    ctx.fillStyle = "#ffdbac";
-    ctx.beginPath();
-    ctx.arc(0, 12 * scale, 3 * scale, 0, Math.PI * 2);
-    ctx.fill();
 
     ctx.restore();
 }
@@ -255,12 +222,10 @@ function update() {
     gameFrame++;
     score++;
 
-    // 체력 감소
     if (gameFrame % 10 === 0) {
         hp -= 0.5;
     }
 
-    // 캐릭터 물리 엔진
     player.vy += player.gravity;
     player.y += player.vy;
 
@@ -270,12 +235,11 @@ function update() {
         player.jumpCount = 0;
     }
 
-    // 거대화 및 무적 타이머 처리
     if (player.giantTimer > 0) {
         player.giantTimer--;
         if (player.giantTimer === 0) {
             player.isGiant = false;
-            player.invincibleTimer = 60; // 거대화 풀린 후 1초간(60프레임) 무적!
+            player.invincibleTimer = 60;
         }
     }
 
@@ -283,12 +247,10 @@ function update() {
         player.invincibleTimer--;
     }
 
-    // 장애물 이동 및 충돌
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
         obs.x -= 6;
 
-        // 충돌 체크
         let hitWidth = player.isGiant ? player.width * 1.6 : player.width;
         let hitHeight = player.isGiant ? player.height * 1.6 : (player.isSliding ? 35 : player.height);
 
@@ -299,11 +261,9 @@ function update() {
             player.y + hitHeight > obs.y
         ) {
             if (player.isGiant) {
-                // 거대화 상태시 장애물 파괴
                 obstacles.splice(i, 1);
                 score += 50;
             } else if (player.invincibleTimer === 0) {
-                // 일반 상태 & 무적 아닐 때: 데미지 20 차감 (수정됨)
                 hp -= 20;
                 obstacles.splice(i, 1);
             }
@@ -314,7 +274,6 @@ function update() {
         }
     }
 
-    // 아이템 이동 및 획득
     for (let i = items.length - 1; i >= 0; i--) {
         let item = items[i];
         item.x -= 6;
@@ -329,7 +288,7 @@ function update() {
             if (item.type === 'heal') hp = Math.min(100, hp + 25);
             if (item.type === 'giant') {
                 player.isGiant = true;
-                player.giantTimer = 300; // 5초간 지속
+                player.giantTimer = 300;
             }
             items.splice(i, 1);
         } else if (item.x + item.width < 0) {
@@ -337,7 +296,6 @@ function update() {
         }
     }
 
-    // 체력 0 이하 시 게임 오버
     if (hp <= 0) {
         hp = 0;
         gameOver = true;
@@ -345,7 +303,6 @@ function update() {
         document.getElementById('gameOverScreen').style.display = 'flex';
     }
 
-    // UI 업데이트
     document.getElementById('hpFill').style.width = Math.max(0, hp) + '%';
     document.getElementById('scoreText').innerText = score;
     document.getElementById('coinText').innerText = coins;
@@ -354,15 +311,12 @@ function update() {
 }
 
 function draw() {
-    // 배경
     ctx.fillStyle = '#87CEEB';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 바닥
     ctx.fillStyle = '#2ed573';
     ctx.fillRect(0, 350, canvas.width, 50);
 
-    // 장애물 그리기
     obstacles.forEach(obs => {
         if (obs.type === 'saw') {
             ctx.fillStyle = '#a4b0be';
@@ -376,4 +330,56 @@ function draw() {
             ctx.lineTo(obs.x + obs.width / 2, obs.y);
             ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
             ctx.closePath();
-            ctx
+            ctx.fill();
+        }
+    });
+
+    items.forEach(item => {
+        if (item.type === 'coin') {
+            ctx.fillStyle = '#eccc68';
+            ctx.beginPath();
+            ctx.arc(item.x + 12, item.y + 12, 10, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (item.type === 'heal') {
+            ctx.fillStyle = '#ff6b81';
+            ctx.fillRect(item.x, item.y, item.width, item.height);
+        } else if (item.type === 'giant') {
+            ctx.fillStyle = '#70a1ff';
+            ctx.beginPath();
+            ctx.arc(item.x + 12, item.y + 12, 12, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+
+    drawPlayer();
+}
+
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+function resetGame() {
+    score = 0;
+    coins = 0;
+    hp = 100;
+    gameOver = false;
+    gameFrame = 0;
+    player.y = 280;
+    player.vy = 0;
+    player.isGiant = false;
+    player.giantTimer = 0;
+    player.invincibleTimer = 0;
+    obstacles = [];
+    items = [];
+    document.getElementById('gameOverScreen').style.display = 'none';
+}
+
+gameLoop();
+</script>
+</body>
+</html>
+"""
+
+components.html(game_html, height=450)
