@@ -9,25 +9,37 @@ game_html = """
 <head>
     <meta charset="utf-8">
     <style>
-        body { margin: 0; padding: 0; background-color: #222; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        #gameContainer { position: relative; width: 800px; height: 400px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); border-radius: 8px; overflow: hidden; }
-        canvas { display: block; }
-        #uiOverlay { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; color: white; text-shadow: 2px 2px 4px #000; z-index: 5; }
-        .hp-bar-bg { width: 140px; height: 16px; background: #555; border: 2px solid #fff; border-radius: 8px; overflow: hidden; display: inline-block; vertical-align: middle; }
-        .hp-bar-fill { width: 100%; height: 100%; background: #ff4757; transition: width 0.1s; }
+        body { margin: 0; padding: 0; background-color: #1a1a2e; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        #gameContainer { position: relative; width: 800px; height: 400px; box-shadow: 0 12px 30px rgba(0,0,0,0.7); border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.1); background: #000; }
         
-        .overlay-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 10; }
-        .overlay-screen h1 { font-size: 42px; color: #fbc531; margin-bottom: 15px; text-shadow: 2px 2px 4px #000; }
-        .btn { padding: 10px 20px; font-size: 16px; background: #2ed573; border: none; color: white; border-radius: 6px; cursor: pointer; font-weight: bold; margin: 5px; transition: 0.2s; }
-        .btn:hover { transform: scale(1.05); }
-        .btn-shop { background: #e1b12c; }
+        /* 전체화면 스타일 설정 */
+        #gameContainer:fullscreen { width: 100vw; height: 100vh; border-radius: 0; border: none; display: flex; justify-content: center; align-items: center; }
+        #gameContainer:-webkit-full-screen { width: 100vw; height: 100vh; border-radius: 0; border: none; display: flex; justify-content: center; align-items: center; }
+        
+        canvas { display: block; }
+        
+        #uiOverlay { position: absolute; top: 12px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 800; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); z-index: 5; letter-spacing: 0.5px; }
+        .hp-bar-bg { width: 140px; height: 16px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px; overflow: hidden; display: inline-block; vertical-align: middle; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+        .hp-bar-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #ff4757, #ff6b81); transition: width 0.1s; }
+        
+        .fullscreen-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; font-size: 18px; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; margin-left: 10px; }
+        .fullscreen-btn:hover { background: rgba(255,255,255,0.4); transform: scale(1.08); }
+
+        .overlay-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 15, 26, 0.88); backdrop-filter: blur(4px); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 10; }
+        .overlay-screen h1 { font-size: 44px; color: #fbc531; margin-bottom: 15px; text-shadow: 0 4px 10px rgba(251, 197, 49, 0.4); font-weight: 900; letter-spacing: 2px; }
+        .btn { padding: 12px 24px; font-size: 16px; background: linear-gradient(135deg, #2ed573, #26af5f); border: none; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 6px; transition: 0.2s; box-shadow: 0 4px 12px rgba(46, 213, 115, 0.3); }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(46, 213, 115, 0.5); }
+        .btn-shop { background: linear-gradient(135deg, #e1b12c, #c89a1c); box-shadow: 0 4px 12px rgba(225, 177, 44, 0.3); }
+        .btn-shop:hover { box-shadow: 0 6px 16px rgba(225, 177, 44, 0.5); }
         
         /* 상점 UI */
         #shopScreen { display: none; }
         .shop-container { display: flex; gap: 20px; margin-bottom: 20px; }
-        .shop-box { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; text-align: center; width: 200px; }
-        .shop-item { margin: 8px 0; padding: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
-        .shop-item button { padding: 4px 8px; font-size: 12px; cursor: pointer; }
+        .shop-box { background: rgba(255,255,255,0.06); padding: 18px; border-radius: 12px; text-align: center; width: 220px; border: 1px solid rgba(255,255,255,0.1); }
+        .shop-box h3 { margin-top: 0; color: #fbc531; font-size: 18px; }
+        .shop-item { margin: 10px 0; padding: 8px 10px; background: rgba(0,0,0,0.4); border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+        .shop-item button { padding: 5px 10px; font-size: 12px; cursor: pointer; border-radius: 4px; border: none; font-weight: bold; background: #70a1ff; color: white; }
+        .shop-item button:disabled { background: #57606f; cursor: default; }
     </style>
 </head>
 <body>
@@ -39,7 +51,10 @@ game_html = """
         <div>
             HP <div class="hp-bar-bg"><div id="hpFill" class="hp-bar-fill"></div></div>
         </div>
-        <div>SCORE: <span id="scoreText">0</span> | COINS: <span id="coinText">0</span> (누적: <span id="totalCoinText">0</span>)</div>
+        <div style="display: flex; align-items: center;">
+            <span>SCORE: <span id="scoreText">0</span> | COINS: <span id="coinText">0</span> (누적: <span id="totalCoinText">0</span>)</span>
+            <button class="fullscreen-btn" onclick="toggleFullScreen()" title="전체화면 전환">⛶</button>
+        </div>
     </div>
 
     <!-- 메인 메뉴 -->
@@ -52,25 +67,23 @@ game_html = """
     <!-- 상점 메뉴 -->
     <div id="shopScreen" class="overlay-screen">
         <h1>ITEM SHOP</h1>
-        <p>보유 누적 코인: <span id="shopCoinText">0</span></p>
+        <p>보유 누적 코인: <span id="shopCoinText" style="color: #fbc531; font-weight: bold;">0</span></p>
         <div class="shop-container">
-            <!-- 배경 선택 -->
             <div class="shop-box">
                 <h3>배경 테마</h3>
                 <div class="shop-item">
-                    <span>낮 (기본)</span>
+                    <span>푸른 초원 (기본)</span>
                     <button id="bg0" onclick="selectBg(0)">선택</button>
                 </div>
                 <div class="shop-item">
-                    <span>밤 (50코인)</span>
+                    <span>별빛 시티 (50코인)</span>
                     <button id="bg1" onclick="buyOrSelectBg(1, 50)">구매</button>
                 </div>
                 <div class="shop-item">
-                    <span>석양 (100코인)</span>
+                    <span>노을 산맥 (100코인)</span>
                     <button id="bg2" onclick="buyOrSelectBg(2, 100)">구매</button>
                 </div>
             </div>
-            <!-- 수트 선택 -->
             <div class="shop-box">
                 <h3>캐릭터 수트</h3>
                 <div class="shop-item">
@@ -92,9 +105,9 @@ game_html = """
 
     <!-- 게임 오버 -->
     <div id="gameOverScreen" class="overlay-screen" style="display: none;">
-        <h1 style="color: #ff4757;">GAME OVER</h1>
-        <p>최종 점수: <span id="finalScore">0</span> | 획득 코인: <span id="finalCoins">0</span></p>
-        <div>
+        <h1 style="color: #ff4757; text-shadow: 0 4px 10px rgba(255,71,87,0.4);">GAME OVER</h1>
+        <p style="font-size: 18px;">최종 점수: <span id="finalScore" style="color: #fbc531;">0</span> | 획득 코인: <span id="finalCoins" style="color: #eccc68;">0</span></p>
+        <div style="margin-top: 10px;">
             <button class="btn" onclick="resetGame()">다시 시작</button>
             <button class="btn btn-shop" onclick="returnToMenu()">메인 메뉴</button>
         </div>
@@ -102,30 +115,38 @@ game_html = """
 </div>
 
 <script>
+const container = document.getElementById('gameContainer');
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// 커스텀 데이터 & 저장 (로컬스토리지)
+function toggleFullScreen() {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (container.requestFullscreen) {
+            container.requestFullscreen();
+        } else if (container.webkitRequestFullscreen) {
+            container.webkitRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        }
+    }
+}
+
 let totalCoins = parseInt(localStorage.getItem('dash_totalCoins')) || 0;
 let unlockedBgs = JSON.parse(localStorage.getItem('dash_unlockedBgs')) || [true, false, false];
 let unlockedSuits = JSON.parse(localStorage.getItem('dash_unlockedSuits')) || [true, false, false];
 let currentBg = parseInt(localStorage.getItem('dash_currentBg')) || 0;
 let currentSuit = parseInt(localStorage.getItem('dash_currentSuit')) || 0;
 
-// 색상 데이터
-const bgStyles = [
-    { sky: '#87CEEB', ground: '#2ed573' }, // 낮
-    { sky: '#1e272e', ground: '#05c46b' }, // 밤
-    { sky: '#e15f41', ground: '#57606f' }  // 석양
-];
-
 const suitColors = [
-    { shirt: '#fbc531', sleeve: '#e1b12c', pants: '#2f3542', legFront: '#57606f' }, // 옐로우
-    { shirt: '#00a8ff', sleeve: '#0097e6', pants: '#192a56', legFront: '#273c75' }, // 블루
-    { shirt: '#e84118', sleeve: '#c23616', pants: '#2f3542', legFront: '#3d3d3d' }  // 레드
+    { shirt: '#fbc531', sleeve: '#e1b12c', pants: '#2f3542', legFront: '#57606f' },
+    { shirt: '#00a8ff', sleeve: '#0097e6', pants: '#192a56', legFront: '#273c75' },
+    { shirt: '#e84118', sleeve: '#c23616', pants: '#2f3542', legFront: '#3d3d3d' }
 ];
 
-// 게임 상태
 let score = 0;
 let sessionCoins = 0;
 let hp = 100;
@@ -133,7 +154,19 @@ let gameOver = false;
 let gameRunning = false;
 let gameFrame = 0;
 
-// 캐릭터 상태
+const clouds = [
+    { x: 50, y: 50, speed: 0.5, scale: 0.8 },
+    { x: 300, y: 80, speed: 0.3, scale: 1.2 },
+    { x: 600, y: 40, speed: 0.6, scale: 1.0 }
+];
+
+const stars = Array.from({ length: 40 }, () => ({
+    x: Math.random() * 800,
+    y: Math.random() * 200,
+    size: Math.random() * 2 + 1,
+    alpha: Math.random()
+}));
+
 const player = {
     x: 100,
     y: 280,
@@ -145,14 +178,14 @@ const player = {
     maxJumps: 2,
     isSliding: false,
     giantTimer: 0,
-    invincibleTimer: 0, // 거대화 종료 후 1초 무적 (60프레임)
+    invincibleTimer: 0,
     isGiant: false
 };
 
 let obstacles = [];
+let pits = [];
 let items = [];
 
-// 키 입력
 window.addEventListener('keydown', (e) => {
     if (!gameRunning || gameOver) return;
     if ((e.code === 'Space' || e.code === 'ArrowUp') && player.jumpCount < player.maxJumps && !player.isSliding) {
@@ -182,45 +215,33 @@ function updateShopUI() {
     document.getElementById('shopCoinText').innerText = totalCoins;
     document.getElementById('totalCoinText').innerText = totalCoins;
 
-    // 배경 버튼
     for(let i=0; i<3; i++) {
         let btn = document.getElementById('bg' + i);
-        if(currentBg === i) {
-            btn.innerText = "착용중"; btn.disabled = true;
-        } else if(unlockedBgs[i]) {
-            btn.innerText = "선택"; btn.disabled = false;
-        } else {
-            btn.innerText = "구매"; btn.disabled = false;
-        }
+        if(currentBg === i) { btn.innerText = "착용중"; btn.disabled = true; }
+        else if(unlockedBgs[i]) { btn.innerText = "선택"; btn.disabled = false; }
+        else { btn.innerText = "구매"; btn.disabled = false; }
     }
 
-    // 수트 버튼
     for(let i=0; i<3; i++) {
         let btn = document.getElementById('suit' + i);
-        if(currentSuit === i) {
-            btn.innerText = "착용중"; btn.disabled = true;
-        } else if(unlockedSuits[i]) {
-            btn.innerText = "선택"; btn.disabled = false;
-        } else {
-            btn.innerText = "구매"; btn.disabled = false;
-        }
+        if(currentSuit === i) { btn.innerText = "착용중"; btn.disabled = true; }
+        else if(unlockedSuits[i]) { btn.innerText = "선택"; btn.disabled = false; }
+        else { btn.innerText = "구매"; btn.disabled = false; }
     }
 }
 
 function selectBg(idx) { currentBg = idx; saveUserData(); updateShopUI(); }
 function buyOrSelectBg(idx, cost) {
     if(unlockedBgs[idx]) { selectBg(idx); }
-    else if(totalCoins >= cost) {
-        totalCoins -= cost; unlockedBgs[idx] = true; selectBg(idx);
-    } else { alert("코인이 부족합니다!"); }
+    else if(totalCoins >= cost) { totalCoins -= cost; unlockedBgs[idx] = true; selectBg(idx); }
+    else { alert("코인이 부족합니다!"); }
 }
 
 function selectSuit(idx) { currentSuit = idx; saveUserData(); updateShopUI(); }
 function buyOrSelectSuit(idx, cost) {
     if(unlockedSuits[idx]) { selectSuit(idx); }
-    else if(totalCoins >= cost) {
-        totalCoins -= cost; unlockedSuits[idx] = true; selectSuit(idx);
-    } else { alert("코인이 부족합니다!"); }
+    else if(totalCoins >= cost) { totalCoins -= cost; unlockedSuits[idx] = true; selectSuit(idx); }
+    else { alert("코인이 부족합니다!"); }
 }
 
 function openShop() {
@@ -248,23 +269,28 @@ function returnToMenu() {
 }
 
 function spawnObjects() {
-    if (gameFrame % 120 === 0) {
-        let type = Math.random() < 0.5 ? 'saw' : 'spike';
+    if (gameFrame % 130 === 0) {
+        let rand = Math.random();
+        let type = rand < 0.4 ? 'spike' : (rand < 0.7 ? 'saw' : 'high_saw');
         obstacles.push({
             x: 800,
-            y: type === 'saw' ? 260 : 310,
+            y: type === 'spike' ? 310 : (type === 'saw' ? 270 : 220),
             width: 40,
             height: 40,
             type: type
         });
     }
 
-    if (gameFrame % 180 === 0) {
+    if (gameFrame % 280 === 0 && Math.random() < 0.6) {
+        pits.push({ x: 800, width: 90 });
+    }
+
+    if (gameFrame % 170 === 0) {
         let rand = Math.random();
         let itemType = rand < 0.6 ? 'coin' : (rand < 0.85 ? 'heal' : 'giant');
         items.push({
             x: 800,
-            y: itemType === 'coin' ? 220 + Math.random() * 60 : 250,
+            y: itemType === 'coin' ? 200 + Math.random() * 60 : 250,
             width: 25,
             height: 25,
             type: itemType
@@ -272,7 +298,129 @@ function spawnObjects() {
     }
 }
 
-// 다리 그리기
+function drawBackground() {
+    if (currentBg === 0) {
+        let skyGradient = ctx.createLinearGradient(0, 0, 0, 350);
+        skyGradient.addColorStop(0, '#54a0ff');
+        skyGradient.addColorStop(1, '#74b9ff');
+        ctx.fillStyle = skyGradient;
+        ctx.fillRect(0, 0, 800, 350);
+
+        ctx.fillStyle = '#55efc4';
+        let mountainOffset = (gameFrame * 0.5) % 400;
+        ctx.beginPath();
+        ctx.moveTo(0 - mountainOffset, 350);
+        for (let i = -1; i <= 3; i++) {
+            let cx = i * 400 - mountainOffset;
+            ctx.quadraticCurveTo(cx + 100, 220, cx + 200, 350);
+            ctx.quadraticCurveTo(cx + 300, 260, cx + 400, 350);
+        }
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        clouds.forEach(cloud => {
+            if (gameRunning) cloud.x -= cloud.speed;
+            if (cloud.x < -100) cloud.x = 850;
+            ctx.beginPath();
+            ctx.arc(cloud.x, cloud.y, 20 * cloud.scale, 0, Math.PI * 2);
+            ctx.arc(cloud.x + 15 * cloud.scale, cloud.y - 10 * cloud.scale, 25 * cloud.scale, 0, Math.PI * 2);
+            ctx.arc(cloud.x + 35 * cloud.scale, cloud.y, 20 * cloud.scale, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+    } else if (currentBg === 1) {
+        let skyGradient = ctx.createLinearGradient(0, 0, 0, 350);
+        skyGradient.addColorStop(0, '#0c2461');
+        skyGradient.addColorStop(1, '#1e3799');
+        ctx.fillStyle = skyGradient;
+        ctx.fillRect(0, 0, 800, 350);
+
+        stars.forEach(star => {
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + Math.sin(gameFrame * 0.05 + star.x) * 0.4})`;
+            ctx.fillRect(star.x, star.y, star.size, star.size);
+        });
+
+        ctx.fillStyle = '#f8c291';
+        ctx.shadowColor = '#f8c291';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(700, 70, 30, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#0a192f';
+        let cityOffset = (gameFrame * 0.8) % 300;
+        for (let i = -1; i < 4; i++) {
+            let bx = i * 300 - cityOffset;
+            ctx.fillRect(bx + 10, 180, 40, 170);
+            ctx.fillRect(bx + 60, 130, 55, 220);
+            ctx.fillRect(bx + 125, 210, 45, 140);
+            ctx.fillRect(bx + 180, 150, 70, 200);
+
+            ctx.fillStyle = '#f6b93b';
+            for (let wy = 150; wy < 320; wy += 25) {
+                if ((i + wy) % 2 === 0) ctx.fillRect(bx + 72, wy, 8, 12);
+                if ((i + wy) % 3 === 0) ctx.fillRect(bx + 195, wy + 10, 8, 12);
+            }
+            ctx.fillStyle = '#0a192f';
+        }
+
+    } else if (currentBg === 2) {
+        let skyGradient = ctx.createLinearGradient(0, 0, 0, 350);
+        skyGradient.addColorStop(0, '#b71540');
+        skyGradient.addColorStop(0.5, '#e55039');
+        skyGradient.addColorStop(1, '#f6b93b');
+        ctx.fillStyle = skyGradient;
+        ctx.fillRect(0, 0, 800, 350);
+
+        ctx.fillStyle = '#ffda79';
+        ctx.shadowColor = '#ffda79';
+        ctx.shadowBlur = 25;
+        ctx.beginPath();
+        ctx.arc(400, 220, 50, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = 'rgba(78, 15, 30, 0.6)';
+        let mountOffset1 = (gameFrame * 0.3) % 600;
+        ctx.beginPath();
+        ctx.moveTo(-mountOffset1, 350);
+        ctx.lineTo(150 - mountOffset1, 180);
+        ctx.lineTo(350 - mountOffset1, 350);
+        ctx.lineTo(500 - mountOffset1, 210);
+        ctx.lineTo(750 - mountOffset1, 350);
+        ctx.lineTo(1000 - mountOffset1, 350);
+        ctx.fill();
+
+        ctx.fillStyle = '#2c0b0e';
+        let mountOffset2 = (gameFrame * 0.7) % 500;
+        ctx.beginPath();
+        ctx.moveTo(-mountOffset2, 350);
+        ctx.lineTo(100 - mountOffset2, 240);
+        ctx.lineTo(250 - mountOffset2, 350);
+        ctx.lineTo(400 - mountOffset2, 220);
+        ctx.lineTo(600 - mountOffset2, 350);
+        ctx.lineTo(850 - mountOffset2, 350);
+        ctx.fill();
+    }
+
+    let groundColor = currentBg === 0 ? '#2ed573' : (currentBg === 1 ? '#1e272e' : '#3c6382');
+    let dirtColor = currentBg === 0 ? '#b8e994' : (currentBg === 1 ? '#0f171e' : '#218c74');
+
+    ctx.fillStyle = groundColor;
+    ctx.fillRect(0, 350, 800, 12);
+
+    ctx.fillStyle = dirtColor;
+    ctx.fillRect(0, 362, 800, 38);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+    let groundLineOffset = (gameFrame * 6) % 40;
+    for (let x = -40; x < 840; x += 40) {
+        ctx.fillRect(x - groundLineOffset, 368, 20, 4);
+        ctx.fillRect(x - groundLineOffset + 15, 382, 10, 4);
+    }
+}
+
 function drawLeg(ctx, hipAngle, kneeAngle, scale, color) {
     ctx.save();
     ctx.translate(0, -24 * scale);
@@ -291,7 +439,6 @@ function drawLeg(ctx, hipAngle, kneeAngle, scale, color) {
     ctx.restore();
 }
 
-// 팔 그리기
 function drawArm(ctx, angle, scale, color) {
     ctx.save();
     ctx.translate(0, -48 * scale);
@@ -312,11 +459,9 @@ function drawArm(ctx, angle, scale, color) {
     ctx.restore();
 }
 
-// 캐릭터 그리기 (자연스러운 달리기 + 수트)
 function drawPlayer() {
     ctx.save();
     
-    // 무적 상태 시 깜빡임
     if (player.invincibleTimer > 0 && Math.floor(player.invincibleTimer / 5) % 2 === 0) {
         ctx.globalAlpha = 0.4;
     }
@@ -324,22 +469,26 @@ function drawPlayer() {
     let scale = player.isGiant ? 1.6 : 1.0;
     let suit = suitColors[currentSuit];
     
-    let baseWidth = player.width * scale;
-    let baseHeight = (player.isSliding ? 35 : player.height) * scale;
+    let curWidth = (player.isSliding ? 55 : player.width) * scale;
+    let curHeight = (player.isSliding ? 30 : player.height) * scale;
     
-    let renderX = player.x + baseWidth / 2;
-    let renderY = player.y + baseHeight;
+    let renderX = player.x + curWidth / 2;
+    let renderY = player.y + (player.isSliding ? 35 * scale : player.height * scale);
 
     ctx.translate(renderX, renderY);
 
     if (player.isSliding) {
         ctx.fillStyle = suit.shirt;
         ctx.beginPath();
-        ctx.ellipse(-10, -15, 30 * scale, 15 * scale, 0, 0, Math.PI * 2);
+        ctx.ellipse(-5 * scale, -12 * scale, 25 * scale, 12 * scale, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        ctx.fillStyle = suit.pants;
+        ctx.fillRect(-28 * scale, -10 * scale, 20 * scale, 10 * scale);
+
         ctx.fillStyle = "#ffdbac";
         ctx.beginPath();
-        ctx.arc(15 * scale, -20 * scale, 10 * scale, 0, Math.PI * 2);
+        ctx.arc(18 * scale, -14 * scale, 9 * scale, 0, Math.PI * 2);
         ctx.fill();
     } else {
         let runCycle = gameFrame * 0.2;
@@ -357,17 +506,14 @@ function drawPlayer() {
 
         ctx.translate(0, -bobbing);
 
-        // 뒷다리 & 왼팔
         drawLeg(ctx, hipAngle2, kneeAngle2, scale, suit.pants);
         drawArm(ctx, shoulderAngle2, scale, suit.sleeve);
 
-        // 몸통 & 의상
         ctx.fillStyle = suit.shirt;
         ctx.fillRect(-10 * scale, -52 * scale, 20 * scale, 26 * scale);
         ctx.fillStyle = "#2f3542";
         ctx.fillRect(-10 * scale, -28 * scale, 20 * scale, 4 * scale);
 
-        // 머리 & 얼굴
         let headY = -63 * scale;
         ctx.fillStyle = "#ffdbac";
         ctx.beginPath();
@@ -384,7 +530,6 @@ function drawPlayer() {
         ctx.fillStyle = "#e84118";
         ctx.fillRect(4 * scale, headY + 4 * scale, 4 * scale, 2 * scale);
 
-        // 앞다리 & 오른팔
         drawLeg(ctx, hipAngle1, kneeAngle1, scale, suit.legFront);
         drawArm(ctx, shoulderAngle1, scale, suit.shirt);
     }
@@ -397,27 +542,40 @@ function update() {
     gameFrame++;
     score++;
 
-    // 시간 경과 체력 감소
     if (gameFrame % 10 === 0) {
         hp -= 0.5;
     }
 
-    // 물리 엔진
     player.vy += player.gravity;
     player.y += player.vy;
 
+    let overPit = false;
+    let scale = player.isGiant ? 1.6 : 1.0;
+    let playerFootX = player.x + (player.width * scale) / 2;
+
+    pits.forEach(pit => {
+        if (playerFootX > pit.x && playerFootX < pit.x + pit.width) {
+            overPit = true;
+        }
+    });
+
     if (player.y >= 280) {
-        player.y = 280;
-        player.vy = 0;
-        player.jumpCount = 0;
+        if (overPit) {
+            if (player.y > 380) {
+                hp = 0;
+            }
+        } else {
+            player.y = 280;
+            player.vy = 0;
+            player.jumpCount = 0;
+        }
     }
 
-    // 거대화 및 무적 타이머
     if (player.giantTimer > 0) {
         player.giantTimer--;
         if (player.giantTimer === 0) {
             player.isGiant = false;
-            player.invincibleTimer = 60; // 거대화 풀린 후 1초간(60프레임) 무적!
+            player.invincibleTimer = 60;
         }
     }
 
@@ -425,25 +583,34 @@ function update() {
         player.invincibleTimer--;
     }
 
-    // 장애물 이동 및 충돌
+    for (let i = pits.length - 1; i >= 0; i--) {
+        pits[i].x -= 6;
+        if (pits[i].x + pits[i].width < 0) {
+            pits.splice(i, 1);
+        }
+    }
+
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
         obs.x -= 6;
 
-        let hitWidth = player.isGiant ? player.width * 1.6 : player.width;
-        let hitHeight = player.isGiant ? player.height * 1.6 : (player.isSliding ? 35 : player.height);
+        let pBox = {
+            x: player.x,
+            y: player.isSliding ? player.y + 35 * scale : player.y,
+            width: (player.isSliding ? 55 : player.width) * scale,
+            height: (player.isSliding ? 35 : player.height) * scale
+        };
 
         if (
-            player.x < obs.x + obs.width &&
-            player.x + hitWidth > obs.x &&
-            player.y < obs.y + obs.height &&
-            player.y + hitHeight > obs.y
+            pBox.x < obs.x + obs.width &&
+            pBox.x + pBox.width > obs.x &&
+            pBox.y < obs.y + obs.height &&
+            pBox.y + pBox.height > obs.y
         ) {
             if (player.isGiant) {
                 obstacles.splice(i, 1);
                 score += 50;
             } else if (player.invincibleTimer === 0) {
-                // 데미지 20 감소
                 hp -= 20;
                 obstacles.splice(i, 1);
             }
@@ -454,7 +621,6 @@ function update() {
         }
     }
 
-    // 아이템 이동 및 획득
     for (let i = items.length - 1; i >= 0; i--) {
         let item = items[i];
         item.x -= 6;
@@ -470,10 +636,10 @@ function update() {
                 totalCoins += 1;
                 saveUserData();
             }
-            if (item.type === 'heal') hp = Math.min(100, hp + 25);
+            if (item.type === 'heal') hp = Math.min(100, hp + 10);
             if (item.type === 'giant') {
                 player.isGiant = true;
-                player.giantTimer = 300; // 5초
+                player.giantTimer = 300;
             }
             items.splice(i, 1);
         } else if (item.x + item.width < 0) {
@@ -481,7 +647,6 @@ function update() {
         }
     }
 
-    // 게임 오버
     if (hp <= 0) {
         hp = 0;
         gameOver = true;
@@ -490,7 +655,6 @@ function update() {
         document.getElementById('gameOverScreen').style.display = 'flex';
     }
 
-    // UI 업데이트
     document.getElementById('hpFill').style.width = Math.max(0, hp) + '%';
     document.getElementById('scoreText').innerText = score;
     document.getElementById('coinText').innerText = sessionCoins;
@@ -500,23 +664,34 @@ function update() {
 }
 
 function draw() {
-    let style = bgStyles[currentBg];
+    drawBackground();
 
-    // 배경 테마
-    ctx.fillStyle = style.sky;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    pits.forEach(pit => {
+        ctx.fillStyle = '#0f0f1a';
+        ctx.fillRect(pit.x, 350, pit.width, 50);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(pit.x, 350, 4, 50);
+        ctx.fillRect(pit.x + pit.width - 4, 350, 4, 50);
+    });
 
-    // 바닥 테마
-    ctx.fillStyle = style.ground;
-    ctx.fillRect(0, 350, canvas.width, 50);
-
-    // 장애물 그리기
     obstacles.forEach(obs => {
-        if (obs.type === 'saw') {
-            ctx.fillStyle = '#a4b0be';
+        if (obs.type === 'saw' || obs.type === 'high_saw') {
+            ctx.save();
+            ctx.translate(obs.x + 20, obs.y + 20);
+            ctx.rotate(gameFrame * 0.15);
+            ctx.fillStyle = obs.type === 'high_saw' ? '#ff3838' : '#718093';
             ctx.beginPath();
-            ctx.arc(obs.x + 20, obs.y + 20, 20, 0, Math.PI * 2);
+            for (let i = 0; i < 8; i++) {
+                ctx.rotate(Math.PI / 4);
+                ctx.lineTo(22, 0);
+                ctx.lineTo(12, 6);
+            }
             ctx.fill();
+            ctx.fillStyle = '#f5f6fa';
+            ctx.beginPath();
+            ctx.arc(0, 0, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
         } else {
             ctx.fillStyle = '#ff4757';
             ctx.beginPath();
@@ -525,24 +700,36 @@ function draw() {
             ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
             ctx.closePath();
             ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
         }
     });
 
-    // 아이템 그리기
     items.forEach(item => {
         if (item.type === 'coin') {
-            ctx.fillStyle = '#eccc68';
+            ctx.fillStyle = '#f1c40f';
+            ctx.shadowColor = '#f1c40f';
+            ctx.shadowBlur = 8;
             ctx.beginPath();
             ctx.arc(item.x + 12, item.y + 12, 10, 0, Math.PI * 2);
             ctx.fill();
+            ctx.fillStyle = '#f39c12';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText('$', item.x + 8, item.y + 16);
+            ctx.shadowBlur = 0;
         } else if (item.type === 'heal') {
             ctx.fillStyle = '#ff6b81';
-            ctx.fillRect(item.x, item.y, item.width, item.height);
+            ctx.fillRect(item.x + 4, item.y, 8, 24);
+            ctx.fillRect(item.x, item.y + 8, 16, 8);
         } else if (item.type === 'giant') {
             ctx.fillStyle = '#70a1ff';
+            ctx.shadowColor = '#70a1ff';
+            ctx.shadowBlur = 10;
             ctx.beginPath();
             ctx.arc(item.x + 12, item.y + 12, 12, 0, Math.PI * 2);
             ctx.fill();
+            ctx.shadowBlur = 0;
         }
     });
 
@@ -569,6 +756,7 @@ function resetGame() {
     player.giantTimer = 0;
     player.invincibleTimer = 0;
     obstacles = [];
+    pits = [];
     items = [];
     document.getElementById('gameOverScreen').style.display = 'none';
 }
@@ -580,4 +768,5 @@ gameLoop();
 </html>
 """
 
+# components.html의 allow="fullscreen" 속성 지정
 components.html(game_html, height=450)
