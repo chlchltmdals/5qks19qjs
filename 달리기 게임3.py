@@ -12,7 +12,6 @@ game_html = """
         body { margin: 0; padding: 0; background-color: #1a1a2e; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         #gameContainer { position: relative; width: 1000px; height: 500px; box-shadow: 0 12px 30px rgba(0,0,0,0.7); border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.1); background: #000; }
         
-        /* 전체화면 스타일 설정 */
         #gameContainer:fullscreen { width: 100vw; height: 100vh; border-radius: 0; border: none; display: flex; justify-content: center; align-items: center; }
         #gameContainer:-webkit-full-screen { width: 100vw; height: 100vh; border-radius: 0; border: none; display: flex; justify-content: center; align-items: center; }
         
@@ -32,7 +31,6 @@ game_html = """
         .btn-shop { background: linear-gradient(135deg, #e1b12c, #c89a1c); box-shadow: 0 4px 12px rgba(225, 177, 44, 0.3); }
         .btn-shop:hover { shadow: 0 6px 16px rgba(225, 177, 44, 0.5); }
         
-        /* 상점 UI */
         #shopScreen { display: none; }
         .shop-container { display: flex; gap: 30px; margin-bottom: 25px; }
         .shop-box { background: rgba(255,255,255,0.06); padding: 22px; border-radius: 12px; text-align: center; width: 260px; border: 1px solid rgba(255,255,255,0.1); }
@@ -57,14 +55,12 @@ game_html = """
         </div>
     </div>
 
-    <!-- 메인 메뉴 -->
     <div id="mainMenuScreen" class="overlay-screen">
         <h1>DASH RUNNER</h1>
         <button class="btn" onclick="startGame()">게임 시작</button>
         <button class="btn btn-shop" onclick="openShop()">상점 / 커스텀</button>
     </div>
 
-    <!-- 상점 메뉴 -->
     <div id="shopScreen" class="overlay-screen">
         <h1>ITEM SHOP</h1>
         <p style="font-size: 18px;">보유 누적 코인: <span id="shopCoinText" style="color: #fbc531; font-weight: bold;">0</span></p>
@@ -103,7 +99,6 @@ game_html = """
         <button class="btn" onclick="closeShop()">메뉴로 돌아가기</button>
     </div>
 
-    <!-- 게임 오버 -->
     <div id="gameOverScreen" class="overlay-screen" style="display: none;">
         <h1 style="color: #ff4757; text-shadow: 0 4px 10px rgba(255,71,87,0.4);">GAME OVER</h1>
         <p style="font-size: 20px;">최종 점수: <span id="finalScore" style="color: #fbc531;">0</span> | 획득 코인: <span id="finalCoins" style="color: #eccc68;">0</span></p>
@@ -172,7 +167,7 @@ const player = {
     y: 360,
     width: 40,
     height: 70,
-    slideHeight: 30, // 슬라이딩 시 신장 Height
+    slideHeight: 30,
     vy: 0,
     gravity: 0.8,
     jumpCount: 0,
@@ -273,11 +268,13 @@ function spawnObjects() {
     if (gameFrame % 130 === 0) {
         let rand = Math.random();
         let type = rand < 0.4 ? 'spike' : (rand < 0.7 ? 'saw' : 'high_saw');
+        
+        // [수정점 1] high_saw의 Y축 위치를 210으로 조절하여 점프로 못 넘고 무조건 슬라이딩으로만 통과 가능하게 설정
         obstacles.push({
             x: 1000,
-            y: type === 'spike' ? 390 : (type === 'saw' ? 350 : 290),
-            width: 40,
-            height: 40,
+            y: type === 'spike' ? 390 : (type === 'saw' ? 350 : 210),
+            width: type === 'high_saw' ? 50 : 40,
+            height: type === 'high_saw' ? 180 : 40,
             type: type
         });
     }
@@ -292,8 +289,8 @@ function spawnObjects() {
         items.push({
             x: 1000,
             y: itemType === 'coin' ? 260 + Math.random() * 80 : 320,
-            width: 25,
-            height: 25,
+            width: 30,
+            height: 35,
             type: itemType
         });
     }
@@ -471,15 +468,12 @@ function drawPlayer() {
     let suit = suitColors[currentSuit];
     
     let curWidth = (player.isSliding ? 55 : player.width) * scale;
-    
-    // [핵심 보정] Y축 렌더링 위치를 항상 발바닥 기준(430 - 높이 차이)으로 완벽하게 고정합니다.
     let renderX = player.x + curWidth / 2;
     let renderY = player.y + (player.height * scale); 
 
     ctx.translate(renderX, renderY);
 
     if (player.isSliding) {
-        // 바닥 밀착형 슬라이딩 애니메이션 렌더링
         ctx.fillStyle = suit.shirt;
         ctx.beginPath();
         ctx.ellipse(-5 * scale, -12 * scale, 25 * scale, 10 * scale, 0, 0, Math.PI * 2);
@@ -596,7 +590,6 @@ function update() {
         let obs = obstacles[i];
         obs.x -= 6;
 
-        // [핵심 보정] 슬라이딩 판정 박스 좌표를 지면 높이에 정확히 맞춤
         let currentHeight = player.isSliding ? player.slideHeight : player.height;
         let pBox = {
             x: player.x,
@@ -648,7 +641,7 @@ function update() {
                 totalCoins += 1;
                 saveUserData();
             }
-            if (item.type === 'heal') hp = Math.min(100, hp + 10);
+            if (item.type === 'heal') hp = Math.min(100, hp + 20);
             if (item.type === 'giant') {
                 player.isGiant = true;
                 player.giantTimer = 300;
@@ -689,21 +682,27 @@ function draw() {
     obstacles.forEach(obs => {
         if (obs.type === 'saw' || obs.type === 'high_saw') {
             ctx.save();
-            ctx.translate(obs.x + 20, obs.y + 20);
+            ctx.translate(obs.x + obs.width / 2, obs.y + (obs.type === 'high_saw' ? 80 : 20));
             ctx.rotate(gameFrame * 0.15);
             ctx.fillStyle = obs.type === 'high_saw' ? '#ff3838' : '#718093';
             ctx.beginPath();
             for (let i = 0; i < 8; i++) {
                 ctx.rotate(Math.PI / 4);
-                ctx.lineTo(22, 0);
+                ctx.lineTo(24, 0);
                 ctx.lineTo(12, 6);
             }
             ctx.fill();
             ctx.fillStyle = '#f5f6fa';
             ctx.beginPath();
-            ctx.arc(0, 0, 6, 0, Math.PI * 2);
+            ctx.arc(0, 0, 7, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
+
+            // 슬라이딩 전용 장해물(상단 체인/지지대)
+            if (obs.type === 'high_saw') {
+                ctx.fillStyle = '#485460';
+                ctx.fillRect(obs.x + obs.width / 2 - 3, 0, 6, obs.y + 80);
+            }
         } else {
             ctx.fillStyle = '#ff4757';
             ctx.beginPath();
@@ -731,9 +730,46 @@ function draw() {
             ctx.fillText('$', item.x + 8, item.y + 16);
             ctx.shadowBlur = 0;
         } else if (item.type === 'heal') {
-            ctx.fillStyle = '#ff6b81';
-            ctx.fillRect(item.x + 4, item.y, 8, 24);
-            ctx.fillRect(item.x, item.y + 8, 16, 8);
+            // [수정점 2] 예쁜 유리 물약병(체력 포션) 디자인
+            ctx.save();
+            ctx.translate(item.x + 15, item.y + 15);
+            
+            // 붉은 후광 효과
+            ctx.shadowColor = '#ff4757';
+            ctx.shadowBlur = 12;
+
+            // 물약병 마개 (코르크 마개)
+            ctx.fillStyle = '#a4b0be';
+            ctx.fillRect(-4, -16, 8, 4);
+
+            // 물약병 주둥이
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(-6, -12, 12, 3);
+
+            // 유리병 몸통 (라운드 플라스크 형태)
+            ctx.beginPath();
+            ctx.arc(0, 3, 13, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // 액체 (살짝 흔들리는 붉은 물약)
+            ctx.beginPath();
+            let wave = Math.sin(gameFrame * 0.1) * 2;
+            ctx.arc(0, 3, 11, 0.1 * Math.PI, 0.9 * Math.PI, false);
+            ctx.quadraticCurveTo(0, 3 + wave, -11, 3);
+            ctx.fillStyle = '#ff4757';
+            ctx.fill();
+
+            // 포션 빛 하이라이트
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-4, -2, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
         } else if (item.type === 'giant') {
             ctx.fillStyle = '#70a1ff';
             ctx.shadowColor = '#70a1ff';
