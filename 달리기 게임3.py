@@ -182,19 +182,20 @@ let obstacles = [];
 let pits = [];
 let items = [];
 
+// [수정점] S 키 추가 입력 처리
 window.addEventListener('keydown', (e) => {
     if (!gameRunning || gameOver) return;
     if ((e.code === 'Space' || e.code === 'ArrowUp') && player.jumpCount < player.maxJumps && !player.isSliding) {
         player.vy = -12.5;
         player.jumpCount++;
     }
-    if (e.code === 'ArrowDown' && player.jumpCount === 0) {
+    if ((e.code === 'ArrowDown' || e.code === 'KeyS') && player.jumpCount === 0) {
         player.isSliding = true;
     }
 });
 
 window.addEventListener('keyup', (e) => {
-    if (e.code === 'ArrowDown') {
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') {
         player.isSliding = false;
     }
 });
@@ -282,11 +283,10 @@ function spawnObjects() {
         pits.push({ x: 1000, width: 100 });
     }
 
-    // [수정점] 아이템 스폰 주기 단축(170->100) 및 물약/코인 비중 확대
-    if (gameFrame % 100 === 0) {
+    // [수정점] 물약 비율 감소 (물약 20%, 코인 70%, 거대화 10%)
+    if (gameFrame % 110 === 0) {
         let rand = Math.random();
-        // 물약 45%, 코인 45%, 거대화 10%
-        let itemType = rand < 0.45 ? 'heal' : (rand < 0.90 ? 'coin' : 'giant');
+        let itemType = rand < 0.20 ? 'heal' : (rand < 0.90 ? 'coin' : 'giant');
         items.push({
             x: 1000,
             y: itemType === 'coin' ? 260 + Math.random() * 80 : 320,
@@ -638,13 +638,11 @@ function update() {
             pBox.y + pBox.height > item.y
         ) {
             if (item.type === 'coin') {
-                // [수정점] 코인 하나당 획득량을 3개로 증가
                 sessionCoins += 3;
                 totalCoins += 3;
                 saveUserData();
             }
             if (item.type === 'heal') {
-                // [수정점] 회복량을 20에서 35로 상향
                 hp = Math.min(100, hp + 35);
             }
             if (item.type === 'giant') {
