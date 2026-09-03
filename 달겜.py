@@ -114,8 +114,8 @@ const container = document.getElementById('gameContainer');
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// 초당 360픽셀 수평 이동 (절대 속도 고정)
-const BASE_SPEED = 360; 
+// 속도 감각 향상: 기존 360 -> 580으로 대폭 상승
+const BASE_SPEED = 580; 
 
 function toggleFullScreen() {
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
@@ -158,9 +158,9 @@ let pitTimer = 0;
 let itemTimer = 0;
 
 const clouds = [
-    { x: 50, y: 60, speed: 30, scale: 1.0 },
-    { x: 400, y: 100, speed: 20, scale: 1.4 },
-    { x: 800, y: 50, speed: 40, scale: 1.2 }
+    { x: 50, y: 60, speed: 50, scale: 1.0 },
+    { x: 400, y: 100, speed: 30, scale: 1.4 },
+    { x: 800, y: 50, speed: 60, scale: 1.2 }
 ];
 
 const stars = Array.from({ length: 50 }, () => ({
@@ -177,7 +177,7 @@ const player = {
     height: 70,
     slideHeight: 30,
     vy: 0,
-    gravity: 1800, // dt 기반 중력
+    gravity: 2400, // 높아진 속도에 맞춰 중력 및 점프 조정
     jumpCount: 0,
     maxJumps: 2,
     isSliding: false,
@@ -193,7 +193,7 @@ let items = [];
 window.addEventListener('keydown', (e) => {
     if (!gameRunning || gameOver) return;
     if ((e.code === 'Space' || e.code === 'ArrowUp') && player.jumpCount < player.maxJumps && !player.isSliding) {
-        player.vy = -620; // dt 기반 점프력
+        player.vy = -720;
         player.jumpCount++;
     }
     if ((e.code === 'ArrowDown' || e.code === 'KeyS') && player.jumpCount === 0) {
@@ -263,7 +263,7 @@ function startGame() {
     document.getElementById('mainMenuScreen').style.display = 'none';
     resetGame();
     gameRunning = true;
-    lastTime = performance.now();
+    lastTime = performance.now(); // 시작 시점 시간 동기화
 }
 
 function returnToMenu() {
@@ -278,7 +278,7 @@ function spawnObjects(dt) {
     pitTimer += dt;
     itemTimer += dt;
 
-    if (spawnTimer >= 1.8) {
+    if (spawnTimer >= 1.2) {
         spawnTimer = 0;
         let rand = Math.random();
         let type = rand < 0.4 ? 'spike' : (rand < 0.7 ? 'saw' : 'high_saw');
@@ -292,14 +292,14 @@ function spawnObjects(dt) {
         });
     }
 
-    if (pitTimer >= 4.5) {
+    if (pitTimer >= 3.0) {
         pitTimer = 0;
         if (Math.random() < 0.6) {
-            pits.push({ x: 1000, width: 100 });
+            pits.push({ x: 1000, width: 120 });
         }
     }
 
-    if (itemTimer >= 1.5) {
+    if (itemTimer >= 1.0) {
         itemTimer = 0;
         let rand = Math.random();
         let itemType = rand < 0.20 ? 'heal' : (rand < 0.90 ? 'coin' : 'giant');
@@ -322,7 +322,7 @@ function drawBackground(dt) {
         ctx.fillRect(0, 0, 1000, 430);
 
         ctx.fillStyle = '#55efc4';
-        let mountainOffset = (gameFrame * 0.5) % 500;
+        let mountainOffset = (gameFrame * 1.0) % 500;
         ctx.beginPath();
         ctx.moveTo(0 - mountainOffset, 430);
         for (let i = -1; i <= 3; i++) {
@@ -364,7 +364,7 @@ function drawBackground(dt) {
         ctx.shadowBlur = 0;
 
         ctx.fillStyle = '#0a192f';
-        let cityOffset = (gameFrame * 0.8) % 350;
+        let cityOffset = (gameFrame * 1.5) % 350;
         for (let i = -1; i < 4; i++) {
             let bx = i * 350 - cityOffset;
             ctx.fillRect(bx + 10, 220, 50, 210);
@@ -397,7 +397,7 @@ function drawBackground(dt) {
         ctx.shadowBlur = 0;
 
         ctx.fillStyle = 'rgba(78, 15, 30, 0.6)';
-        let mountOffset1 = (gameFrame * 0.3) % 700;
+        let mountOffset1 = (gameFrame * 0.8) % 700;
         ctx.beginPath();
         ctx.moveTo(-mountOffset1, 430);
         ctx.lineTo(200 - mountOffset1, 220);
@@ -408,7 +408,7 @@ function drawBackground(dt) {
         ctx.fill();
 
         ctx.fillStyle = '#2c0b0e';
-        let mountOffset2 = (gameFrame * 0.7) % 600;
+        let mountOffset2 = (gameFrame * 1.4) % 600;
         ctx.beginPath();
         ctx.moveTo(-mountOffset2, 430);
         ctx.lineTo(130 - mountOffset2, 300);
@@ -429,7 +429,7 @@ function drawBackground(dt) {
     ctx.fillRect(0, 445, 1000, 55);
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-    let groundLineOffset = (gameFrame * 6) % 50;
+    let groundLineOffset = (gameFrame * 10) % 50;
     for (let x = -50; x < 1050; x += 50) {
         ctx.fillRect(x - groundLineOffset, 452, 25, 5);
         ctx.fillRect(x - groundLineOffset + 20, 470, 12, 5);
@@ -504,7 +504,7 @@ function drawPlayer() {
         ctx.arc(18 * scale, -12 * scale, 8 * scale, 0, Math.PI * 2);
         ctx.fill();
     } else {
-        let runCycle = gameFrame * 0.2;
+        let runCycle = gameFrame * 0.35;
         let isAir = player.y < 360;
 
         let bobbing = isAir ? 0 : Math.sin(runCycle * 2) * 4 * scale;
@@ -553,9 +553,9 @@ function drawPlayer() {
 function update(dt) {
     if (!gameRunning || gameOver) return;
     gameFrame++;
-    score += Math.round(dt * 60);
+    score += Math.round(dt * 100);
 
-    hp -= 3.0 * dt; // 체력 지속 감소
+    hp -= 2.5 * dt;
 
     player.vy += player.gravity * dt;
     player.y += player.vy * dt;
@@ -704,7 +704,7 @@ function drawObstacle(obs) {
             }
         } else if (obs.type === 'saw') {
             ctx.translate(cx, obs.y + 20);
-            ctx.rotate(gameFrame * 0.1);
+            ctx.rotate(gameFrame * 0.2);
             ctx.fillStyle = '#78e08f';
             for (let i = 0; i < 4; i++) {
                 ctx.rotate(Math.PI / 2);
@@ -910,8 +910,8 @@ function gameLoop(now) {
     if (!lastTime) lastTime = now;
     let dt = (now - lastTime) / 1000;
     
-    // 탭 전환이나 초기 로딩으로 지나치게 큰 dt가 들어올 경우 캡 처리
-    if (dt > 0.1) dt = 0.016; 
+    // 비정상적으로 긴 델타타임 누적 방지 (최대 0.033초로 엄격 제한)
+    if (dt > 0.033 || dt <= 0) dt = 0.016; 
     lastTime = now;
 
     update(dt);
@@ -936,6 +936,7 @@ function resetGame() {
     obstacles = [];
     pits = [];
     items = [];
+    lastTime = performance.now(); // 리셋 시 타이머 정밀 초기화
     document.getElementById('gameOverScreen').style.display = 'none';
 }
 
