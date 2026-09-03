@@ -17,15 +17,15 @@ game_html = """
         
         canvas { display: block; width: 100%; height: 100%; }
         
-        #uiOverlay { position: absolute; top: 15px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 17px; font-weight: 800; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); z-index: 5; letter-spacing: 0.5px; }
-        .hp-bar-bg { width: 180px; height: 20px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px; overflow: hidden; display: inline-block; vertical-align: middle; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+        #uiOverlay { position: absolute; top: 15px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 800; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); z-index: 5; letter-spacing: 0.5px; }
+        .hp-bar-bg { width: 160px; height: 18px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px; overflow: hidden; display: inline-block; vertical-align: middle; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
         .hp-bar-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #ff4757, #ff6b81); transition: width 0.1s; }
         
-        .fullscreen-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; font-size: 20px; width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; margin-left: 15px; }
+        .fullscreen-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; font-size: 18px; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; margin-left: 15px; }
         .fullscreen-btn:hover { background: rgba(255,255,255,0.4); transform: scale(1.08); }
 
         .overlay-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 15, 26, 0.88); backdrop-filter: blur(4px); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 10; }
-        .overlay-screen h1 { font-size: 52px; color: #fbc531; margin-bottom: 20px; text-shadow: 0 4px 10px rgba(251, 197, 49, 0.4); font-weight: 900; letter-spacing: 2px; }
+        .overlay-screen h1 { font-size: 52px; color: #fbc531; margin-bottom: 10px; text-shadow: 0 4px 10px rgba(251, 197, 49, 0.4); font-weight: 900; letter-spacing: 2px; }
         .btn { padding: 14px 28px; font-size: 18px; background: linear-gradient(135deg, #2ed573, #26af5f); border: none; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 8px; transition: 0.2s; box-shadow: 0 4px 12px rgba(46, 213, 115, 0.3); }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(46, 213, 115, 0.5); }
         .btn-shop { background: linear-gradient(135deg, #e1b12c, #c89a1c); box-shadow: 0 4px 12px rgba(225, 177, 44, 0.3); }
@@ -38,6 +38,8 @@ game_html = """
         .shop-item { margin: 12px 0; padding: 10px 12px; background: rgba(0,0,0,0.4); border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
         .shop-item button { padding: 6px 12px; font-size: 13px; cursor: pointer; border-radius: 4px; border: none; font-weight: bold; background: #70a1ff; color: white; }
         .shop-item button:disabled { background: #57606f; cursor: default; }
+
+        .high-score-badge { font-size: 22px; color: #48dbfb; margin-bottom: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -50,13 +52,14 @@ game_html = """
             HP <div class="hp-bar-bg"><div id="hpFill" class="hp-bar-fill"></div></div>
         </div>
         <div style="display: flex; align-items: center;">
-            <span>SCORE: <span id="scoreText">0</span> | COINS: <span id="coinText">0</span> (누적: <span id="totalCoinText">0</span>)</span>
+            <span>BEST: <span id="highScoreText" style="color:#48dbfb;">0</span> | SCORE: <span id="scoreText">0</span> | COINS: <span id="coinText">0</span></span>
             <button class="fullscreen-btn" onclick="toggleFullScreen()" title="전체화면 전환">⛶</button>
         </div>
     </div>
 
     <div id="mainMenuScreen" class="overlay-screen">
         <h1>DASH RUNNER</h1>
+        <div class="high-score-badge">🏆 최고 점수: <span id="menuHighScore">0</span></div>
         <button class="btn" onclick="startGame()">게임 시작</button>
         <button class="btn btn-shop" onclick="openShop()">상점 / 커스텀</button>
     </div>
@@ -101,7 +104,8 @@ game_html = """
 
     <div id="gameOverScreen" class="overlay-screen" style="display: none;">
         <h1 style="color: #ff4757; text-shadow: 0 4px 10px rgba(255,71,87,0.4);">GAME OVER</h1>
-        <p style="font-size: 20px;">최종 점수: <span id="finalScore" style="color: #fbc531;">0</span> | 획득 코인: <span id="finalCoins" style="color: #eccc68;">0</span></p>
+        <p style="font-size: 20px; margin-bottom: 5px;">최종 점수: <span id="finalScore" style="color: #fbc531;">0</span> | 획득 코인: <span id="finalCoins" style="color: #eccc68;">0</span></p>
+        <p style="font-size: 18px; color: #48dbfb; font-weight: bold;">최고 점수: <span id="finalHighScore">0</span></p>
         <div style="margin-top: 15px;">
             <button class="btn" onclick="resetGame()">다시 시작</button>
             <button class="btn btn-shop" onclick="returnToMenu()">메인 메뉴</button>
@@ -114,7 +118,10 @@ const container = document.getElementById('gameContainer');
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const BASE_SPEED = 580; 
+const INITIAL_SPEED = 320;
+const MAX_SPEED = 650;
+const SPEED_ACCEL = 6; 
+let currentSpeed = INITIAL_SPEED;
 
 function toggleFullScreen() {
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
@@ -133,6 +140,7 @@ function toggleFullScreen() {
 }
 
 let totalCoins = parseInt(localStorage.getItem('dash_totalCoins')) || 0;
+let highScore = parseInt(localStorage.getItem('dash_highScore')) || 0;
 let unlockedBgs = JSON.parse(localStorage.getItem('dash_unlockedBgs')) || [true, false, false];
 let unlockedSuits = JSON.parse(localStorage.getItem('dash_unlockedSuits')) || [true, false, false];
 let currentBg = parseInt(localStorage.getItem('dash_currentBg')) || 0;
@@ -208,15 +216,20 @@ window.addEventListener('keyup', (e) => {
 
 function saveUserData() {
     localStorage.setItem('dash_totalCoins', totalCoins);
+    localStorage.setItem('dash_highScore', highScore);
     localStorage.setItem('dash_unlockedBgs', JSON.stringify(unlockedBgs));
     localStorage.setItem('dash_unlockedSuits', JSON.stringify(unlockedSuits));
     localStorage.setItem('dash_currentBg', currentBg);
     localStorage.setItem('dash_currentSuit', currentSuit);
 }
 
+function updateUI() {
+    document.getElementById('highScoreText').innerText = highScore;
+    document.getElementById('menuHighScore').innerText = highScore;
+}
+
 function updateShopUI() {
     document.getElementById('shopCoinText').innerText = totalCoins;
-    document.getElementById('totalCoinText').innerText = totalCoins;
 
     for(let i=0; i<3; i++) {
         let btn = document.getElementById('bg' + i);
@@ -269,6 +282,7 @@ function returnToMenu() {
     document.getElementById('gameOverScreen').style.display = 'none';
     document.getElementById('mainMenuScreen').style.display = 'flex';
     gameRunning = false;
+    updateUI();
     updateShopUI();
 }
 
@@ -277,7 +291,10 @@ function spawnObjects(dt) {
     pitTimer += dt;
     itemTimer += dt;
 
-    if (spawnTimer >= 1.2) {
+    let speedFactor = (currentSpeed - INITIAL_SPEED) / (MAX_SPEED - INITIAL_SPEED);
+    let spawnInterval = Math.max(0.7, 1.6 - (speedFactor * 0.9));
+
+    if (spawnTimer >= spawnInterval) {
         spawnTimer = 0;
         let rand = Math.random();
         let type = rand < 0.4 ? 'spike' : (rand < 0.7 ? 'saw' : 'high_saw');
@@ -289,19 +306,40 @@ function spawnObjects(dt) {
             height: type === 'high_saw' ? 395 : 40,
             type: type
         });
+
+        if (speedFactor > 0.4 && Math.random() < speedFactor * 0.5) {
+            let extraType = Math.random() < 0.5 ? 'spike' : 'saw';
+            obstacles.push({
+                x: 1200,
+                y: extraType === 'spike' ? 390 : 350,
+                width: 40,
+                height: 40,
+                type: extraType
+            });
+        }
     }
 
-    if (pitTimer >= 3.0) {
+    if (pitTimer >= 3.5) {
         pitTimer = 0;
-        if (Math.random() < 0.6) {
+        if (Math.random() < 0.5) {
             pits.push({ x: 1000, width: 120 });
         }
     }
 
-    if (itemTimer >= 1.0) {
+    if (itemTimer >= 1.3) {
         itemTimer = 0;
         let rand = Math.random();
-        let itemType = rand < 0.20 ? 'heal' : (rand < 0.90 ? 'coin' : 'giant');
+        
+        let healChance = 0.22 - (speedFactor * 0.15);
+        let giantChance = 0.12 - (speedFactor * 0.08);
+
+        let itemType = 'coin';
+        if (rand < healChance) {
+            itemType = 'heal';
+        } else if (rand < healChance + giantChance) {
+            itemType = 'giant';
+        }
+
         items.push({
             x: 1000,
             y: itemType === 'coin' ? 260 + Math.random() * 80 : 320,
@@ -321,7 +359,7 @@ function drawBackground(dt) {
         ctx.fillRect(0, 0, 1000, 430);
 
         ctx.fillStyle = '#55efc4';
-        let mountainOffset = (gameFrame * 1.0) % 500;
+        let mountainOffset = (gameFrame * (currentSpeed / 400)) % 500;
         ctx.beginPath();
         ctx.moveTo(0 - mountainOffset, 430);
         for (let i = -1; i <= 3; i++) {
@@ -333,7 +371,7 @@ function drawBackground(dt) {
 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
         clouds.forEach(cloud => {
-            if (gameRunning) cloud.x -= cloud.speed * dt;
+            if (gameRunning) cloud.x -= cloud.speed * dt * (currentSpeed / 500);
             if (cloud.x < -120) cloud.x = 1050;
             ctx.beginPath();
             ctx.arc(cloud.x, cloud.y, 20 * cloud.scale, 0, Math.PI * 2);
@@ -363,7 +401,7 @@ function drawBackground(dt) {
         ctx.shadowBlur = 0;
 
         ctx.fillStyle = '#0a192f';
-        let cityOffset = (gameFrame * 1.5) % 350;
+        let cityOffset = (gameFrame * (currentSpeed / 300)) % 350;
         for (let i = -1; i < 4; i++) {
             let bx = i * 350 - cityOffset;
             ctx.fillRect(bx + 10, 220, 50, 210);
@@ -396,7 +434,7 @@ function drawBackground(dt) {
         ctx.shadowBlur = 0;
 
         ctx.fillStyle = 'rgba(78, 15, 30, 0.6)';
-        let mountOffset1 = (gameFrame * 0.8) % 700;
+        let mountOffset1 = (gameFrame * (currentSpeed / 500)) % 700;
         ctx.beginPath();
         ctx.moveTo(-mountOffset1, 430);
         ctx.lineTo(200 - mountOffset1, 220);
@@ -407,7 +445,7 @@ function drawBackground(dt) {
         ctx.fill();
 
         ctx.fillStyle = '#2c0b0e';
-        let mountOffset2 = (gameFrame * 1.4) % 600;
+        let mountOffset2 = (gameFrame * (currentSpeed / 350)) % 600;
         ctx.beginPath();
         ctx.moveTo(-mountOffset2, 430);
         ctx.lineTo(130 - mountOffset2, 300);
@@ -428,7 +466,7 @@ function drawBackground(dt) {
     ctx.fillRect(0, 445, 1000, 55);
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-    let groundLineOffset = (gameFrame * 10) % 50;
+    let groundLineOffset = (gameFrame * (currentSpeed / 50)) % 50;
     for (let x = -50; x < 1050; x += 50) {
         ctx.fillRect(x - groundLineOffset, 452, 25, 5);
         ctx.fillRect(x - groundLineOffset + 20, 470, 12, 5);
@@ -503,7 +541,7 @@ function drawPlayer() {
         ctx.arc(18 * scale, -12 * scale, 8 * scale, 0, Math.PI * 2);
         ctx.fill();
     } else {
-        let runCycle = gameFrame * 0.35;
+        let runCycle = gameFrame * (currentSpeed / 1600);
         let isAir = player.y < 360;
 
         let bobbing = isAir ? 0 : Math.sin(runCycle * 2) * 4 * scale;
@@ -552,9 +590,13 @@ function drawPlayer() {
 function update(dt) {
     if (!gameRunning || gameOver) return;
     gameFrame++;
-    score += Math.round(dt * 100);
+    
+    if (currentSpeed < MAX_SPEED) {
+        currentSpeed += SPEED_ACCEL * dt;
+    }
 
-    hp -= 2.5 * dt;
+    score += Math.round(dt * (currentSpeed / 5));
+    hp -= 2.2 * dt;
 
     player.vy += player.gravity * dt;
     player.y += player.vy * dt;
@@ -594,7 +636,7 @@ function update(dt) {
     }
 
     for (let i = pits.length - 1; i >= 0; i--) {
-        pits[i].x -= BASE_SPEED * dt;
+        pits[i].x -= currentSpeed * dt;
         if (pits[i].x + pits[i].width < 0) {
             pits.splice(i, 1);
         }
@@ -602,7 +644,7 @@ function update(dt) {
 
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
-        obs.x -= BASE_SPEED * dt;
+        obs.x -= currentSpeed * dt;
 
         let currentHeight = player.isSliding ? player.slideHeight : player.height;
         let pBox = {
@@ -612,16 +654,21 @@ function update(dt) {
             height: currentHeight * scale
         };
 
+        // 충돌 체크
         if (
             pBox.x < obs.x + obs.width &&
             pBox.x + pBox.width > obs.x &&
             pBox.y < obs.y + obs.height &&
             pBox.y + pBox.height > obs.y
         ) {
-            // 거대화 상태일 때는 부수지 않고 그냥 무시하며 통과
-            if (!player.isGiant && player.invincibleTimer <= 0) {
-                hp -= 20;
+            if (player.isGiant) {
+                // 거대화 상태: 장애물 파괴 시 +100점
+                score += 100;
                 obstacles.splice(i, 1);
+            } else if (player.invincibleTimer <= 0) {
+                // 일반 상태: 체력 감점 및 장애물 파괴 불가
+                hp -= 20;
+                player.invincibleTimer = 0.8;
             }
         }
 
@@ -632,7 +679,7 @@ function update(dt) {
 
     for (let i = items.length - 1; i >= 0; i--) {
         let item = items[i];
-        item.x -= BASE_SPEED * dt;
+        item.x -= currentSpeed * dt;
 
         let currentHeight = player.isSliding ? player.slideHeight : player.height;
         let pBox = {
@@ -666,18 +713,24 @@ function update(dt) {
         }
     }
 
+    if (score > highScore) {
+        highScore = score;
+        saveUserData();
+    }
+
     if (hp <= 0) {
         hp = 0;
         gameOver = true;
         document.getElementById('finalScore').innerText = score;
         document.getElementById('finalCoins').innerText = sessionCoins;
+        document.getElementById('finalHighScore').innerText = highScore;
         document.getElementById('gameOverScreen').style.display = 'flex';
     }
 
     document.getElementById('hpFill').style.width = Math.max(0, hp) + '%';
     document.getElementById('scoreText').innerText = score;
+    document.getElementById('highScoreText').innerText = highScore;
     document.getElementById('coinText').innerText = sessionCoins;
-    document.getElementById('totalCoinText').innerText = totalCoins;
 
     spawnObjects(dt);
 }
@@ -921,6 +974,7 @@ function resetGame() {
     hp = 100;
     gameOver = false;
     gameFrame = 0;
+    currentSpeed = INITIAL_SPEED;
     spawnTimer = 0;
     pitTimer = 0;
     itemTimer = 0;
@@ -936,6 +990,7 @@ function resetGame() {
     document.getElementById('gameOverScreen').style.display = 'none';
 }
 
+updateUI();
 updateShopUI();
 requestAnimationFrame(gameLoop);
 </script>
