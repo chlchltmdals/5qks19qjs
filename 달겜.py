@@ -114,7 +114,6 @@ const container = document.getElementById('gameContainer');
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// 속도 감각 향상: 기존 360 -> 580으로 대폭 상승
 const BASE_SPEED = 580; 
 
 function toggleFullScreen() {
@@ -177,7 +176,7 @@ const player = {
     height: 70,
     slideHeight: 30,
     vy: 0,
-    gravity: 2400, // 높아진 속도에 맞춰 중력 및 점프 조정
+    gravity: 2400,
     jumpCount: 0,
     maxJumps: 2,
     isSliding: false,
@@ -263,7 +262,7 @@ function startGame() {
     document.getElementById('mainMenuScreen').style.display = 'none';
     resetGame();
     gameRunning = true;
-    lastTime = performance.now(); // 시작 시점 시간 동기화
+    lastTime = performance.now();
 }
 
 function returnToMenu() {
@@ -619,10 +618,8 @@ function update(dt) {
             pBox.y < obs.y + obs.height &&
             pBox.y + pBox.height > obs.y
         ) {
-            if (player.isGiant) {
-                obstacles.splice(i, 1);
-                score += 50;
-            } else if (player.invincibleTimer <= 0) {
+            // 거대화 상태일 때는 부수지 않고 그냥 무시하며 통과
+            if (!player.isGiant && player.invincibleTimer <= 0) {
                 hp -= 20;
                 obstacles.splice(i, 1);
             }
@@ -910,7 +907,6 @@ function gameLoop(now) {
     if (!lastTime) lastTime = now;
     let dt = (now - lastTime) / 1000;
     
-    // 비정상적으로 긴 델타타임 누적 방지 (최대 0.033초로 엄격 제한)
     if (dt > 0.033 || dt <= 0) dt = 0.016; 
     lastTime = now;
 
@@ -936,7 +932,7 @@ function resetGame() {
     obstacles = [];
     pits = [];
     items = [];
-    lastTime = performance.now(); // 리셋 시 타이머 정밀 초기화
+    lastTime = performance.now();
     document.getElementById('gameOverScreen').style.display = 'none';
 }
 
