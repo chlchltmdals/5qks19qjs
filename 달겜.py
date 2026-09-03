@@ -29,7 +29,7 @@ game_html = """
         .btn { padding: 14px 28px; font-size: 18px; background: linear-gradient(135deg, #2ed573, #26af5f); border: none; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 8px; transition: 0.2s; box-shadow: 0 4px 12px rgba(46, 213, 115, 0.3); }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(46, 213, 115, 0.5); }
         .btn-shop { background: linear-gradient(135deg, #e1b12c, #c89a1c); box-shadow: 0 4px 12px rgba(225, 177, 44, 0.3); }
-        .btn-shop:hover { shadow: 0 6px 16px rgba(225, 177, 44, 0.5); }
+        .btn-shop:hover { box-shadow: 0 6px 16px rgba(225, 177, 44, 0.5); }
         
         #shopScreen { display: none; }
         .shop-container { display: flex; gap: 30px; margin-bottom: 25px; }
@@ -114,8 +114,8 @@ const container = document.getElementById('gameContainer');
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// 게임 이동 속도 고정 (6px/frame)
-const GAME_SPEED = 6;
+// 초당 360픽셀 수평 이동 (절대 속도 고정)
+const BASE_SPEED = 360; 
 
 function toggleFullScreen() {
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
@@ -152,10 +152,15 @@ let gameOver = false;
 let gameRunning = false;
 let gameFrame = 0;
 
+let lastTime = 0;
+let spawnTimer = 0;
+let pitTimer = 0;
+let itemTimer = 0;
+
 const clouds = [
-    { x: 50, y: 60, speed: 0.5, scale: 1.0 },
-    { x: 400, y: 100, speed: 0.3, scale: 1.4 },
-    { x: 800, y: 50, speed: 0.6, scale: 1.2 }
+    { x: 50, y: 60, speed: 30, scale: 1.0 },
+    { x: 400, y: 100, speed: 20, scale: 1.4 },
+    { x: 800, y: 50, speed: 40, scale: 1.2 }
 ];
 
 const stars = Array.from({ length: 50 }, () => ({
@@ -172,7 +177,7 @@ const player = {
     height: 70,
     slideHeight: 30,
     vy: 0,
-    gravity: 0.8,
+    gravity: 1800, // dt 기반 중력
     jumpCount: 0,
     maxJumps: 2,
     isSliding: false,
@@ -188,7 +193,7 @@ let items = [];
 window.addEventListener('keydown', (e) => {
     if (!gameRunning || gameOver) return;
     if ((e.code === 'Space' || e.code === 'ArrowUp') && player.jumpCount < player.maxJumps && !player.isSliding) {
-        player.vy = -12.5;
+        player.vy = -620; // dt 기반 점프력
         player.jumpCount++;
     }
     if ((e.code === 'ArrowDown' || e.code === 'KeyS') && player.jumpCount === 0) {
@@ -258,6 +263,7 @@ function startGame() {
     document.getElementById('mainMenuScreen').style.display = 'none';
     resetGame();
     gameRunning = true;
+    lastTime = performance.now();
 }
 
 function returnToMenu() {
@@ -267,12 +273,16 @@ function returnToMenu() {
     updateShopUI();
 }
 
-function spawnObjects() {
-    if (gameFrame % 130 === 0) {
+function spawnObjects(dt) {
+    spawnTimer += dt;
+    pitTimer += dt;
+    itemTimer += dt;
+
+    if (spawnTimer >= 1.8) {
+        spawnTimer = 0;
         let rand = Math.random();
         let type = rand < 0.4 ? 'spike' : (rand < 0.7 ? 'saw' : 'high_saw');
         
-        // 슬라이딩 장애물의 Y축 위치와 높이를 엄격하게 조정 (서있으면 닿고 슬라이딩 시만 아래로 통과)
         obstacles.push({
             x: 1000,
             y: type === 'spike' ? 390 : (type === 'saw' ? 350 : 0),
@@ -282,11 +292,15 @@ function spawnObjects() {
         });
     }
 
-    if (gameFrame % 280 === 0 && Math.random() < 0.6) {
-        pits.push({ x: 1000, width: 100 });
+    if (pitTimer >= 4.5) {
+        pitTimer = 0;
+        if (Math.random() < 0.6) {
+            pits.push({ x: 1000, width: 100 });
+        }
     }
 
-    if (gameFrame % 110 === 0) {
+    if (itemTimer >= 1.5) {
+        itemTimer = 0;
         let rand = Math.random();
         let itemType = rand < 0.20 ? 'heal' : (rand < 0.90 ? 'coin' : 'giant');
         items.push({
@@ -299,7 +313,7 @@ function spawnObjects() {
     }
 }
 
-function drawBackground() {
+function drawBackground(dt) {
     if (currentBg === 0) {
         let skyGradient = ctx.createLinearGradient(0, 0, 0, 430);
         skyGradient.addColorStop(0, '#54a0ff');
@@ -320,7 +334,7 @@ function drawBackground() {
 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
         clouds.forEach(cloud => {
-            if (gameRunning) cloud.x -= cloud.speed;
+            if (gameRunning) cloud.x -= cloud.speed * dt;
             if (cloud.x < -120) cloud.x = 1050;
             ctx.beginPath();
             ctx.arc(cloud.x, cloud.y, 20 * cloud.scale, 0, Math.PI * 2);
@@ -415,7 +429,7 @@ function drawBackground() {
     ctx.fillRect(0, 445, 1000, 55);
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-    let groundLineOffset = (gameFrame * GAME_SPEED) % 50;
+    let groundLineOffset = (gameFrame * 6) % 50;
     for (let x = -50; x < 1050; x += 50) {
         ctx.fillRect(x - groundLineOffset, 452, 25, 5);
         ctx.fillRect(x - groundLineOffset + 20, 470, 12, 5);
@@ -463,7 +477,7 @@ function drawArm(ctx, angle, scale, color) {
 function drawPlayer() {
     ctx.save();
     
-    if (player.invincibleTimer > 0 && Math.floor(player.invincibleTimer / 5) % 2 === 0) {
+    if (player.invincibleTimer > 0 && Math.floor(player.invincibleTimer * 10) % 2 === 0) {
         ctx.globalAlpha = 0.4;
     }
 
@@ -536,17 +550,15 @@ function drawPlayer() {
     ctx.restore();
 }
 
-function update() {
+function update(dt) {
     if (!gameRunning || gameOver) return;
     gameFrame++;
-    score++;
+    score += Math.round(dt * 60);
 
-    if (gameFrame % 10 === 0) {
-        hp -= 0.5;
-    }
+    hp -= 3.0 * dt; // 체력 지속 감소
 
-    player.vy += player.gravity;
-    player.y += player.vy;
+    player.vy += player.gravity * dt;
+    player.y += player.vy * dt;
 
     let overPit = false;
     let scale = player.isGiant ? 1.6 : 1.0;
@@ -571,19 +583,19 @@ function update() {
     }
 
     if (player.giantTimer > 0) {
-        player.giantTimer--;
-        if (player.giantTimer === 0) {
+        player.giantTimer -= dt;
+        if (player.giantTimer <= 0) {
             player.isGiant = false;
-            player.invincibleTimer = 60;
+            player.invincibleTimer = 1.0;
         }
     }
 
     if (player.invincibleTimer > 0) {
-        player.invincibleTimer--;
+        player.invincibleTimer -= dt;
     }
 
     for (let i = pits.length - 1; i >= 0; i--) {
-        pits[i].x -= GAME_SPEED;
+        pits[i].x -= BASE_SPEED * dt;
         if (pits[i].x + pits[i].width < 0) {
             pits.splice(i, 1);
         }
@@ -591,7 +603,7 @@ function update() {
 
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
-        obs.x -= GAME_SPEED;
+        obs.x -= BASE_SPEED * dt;
 
         let currentHeight = player.isSliding ? player.slideHeight : player.height;
         let pBox = {
@@ -610,7 +622,7 @@ function update() {
             if (player.isGiant) {
                 obstacles.splice(i, 1);
                 score += 50;
-            } else if (player.invincibleTimer === 0) {
+            } else if (player.invincibleTimer <= 0) {
                 hp -= 20;
                 obstacles.splice(i, 1);
             }
@@ -623,7 +635,7 @@ function update() {
 
     for (let i = items.length - 1; i >= 0; i--) {
         let item = items[i];
-        item.x -= GAME_SPEED;
+        item.x -= BASE_SPEED * dt;
 
         let currentHeight = player.isSliding ? player.slideHeight : player.height;
         let pBox = {
@@ -649,7 +661,7 @@ function update() {
             }
             if (item.type === 'giant') {
                 player.isGiant = true;
-                player.giantTimer = 300;
+                player.giantTimer = 5.0;
             }
             items.splice(i, 1);
         } else if (item.x + item.width < 0) {
@@ -670,7 +682,7 @@ function update() {
     document.getElementById('coinText').innerText = sessionCoins;
     document.getElementById('totalCoinText').innerText = totalCoins;
 
-    spawnObjects();
+    spawnObjects(dt);
 }
 
 function drawObstacle(obs) {
@@ -705,17 +717,14 @@ function drawObstacle(obs) {
             ctx.arc(0, 0, 7, 0, Math.PI * 2);
             ctx.fill();
         } else if (obs.type === 'high_saw') {
-            // 거대한 내림막 벽 (슬라이딩 필수 장애물)
             ctx.fillStyle = '#636e72';
             ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
             
-            // 위험 경고 스트라이프 패턴
             ctx.fillStyle = '#d63031';
             for (let y = obs.y; y < obs.height - 20; y += 40) {
                 ctx.fillRect(obs.x, y, obs.width, 20);
             }
 
-            // 하단 톱날 그래픽
             ctx.fillStyle = '#2d3436';
             for (let x = obs.x; x < obs.x + obs.width; x += 15) {
                 ctx.beginPath();
@@ -761,7 +770,6 @@ function drawObstacle(obs) {
             ctx.arc(0, 0, 6, 0, Math.PI * 2);
             ctx.fill();
         } else if (obs.type === 'high_saw') {
-            // 네온 레이저 블록
             ctx.fillStyle = '#1e272e';
             ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
             
@@ -808,7 +816,6 @@ function drawObstacle(obs) {
             ctx.fill();
             ctx.shadowBlur = 0;
         } else if (obs.type === 'high_saw') {
-            // 용암 차단벽
             ctx.fillStyle = '#2c0b0e';
             ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
             
@@ -822,8 +829,8 @@ function drawObstacle(obs) {
     ctx.restore();
 }
 
-function draw() {
-    drawBackground();
+function draw(dt) {
+    drawBackground(dt);
 
     pits.forEach(pit => {
         ctx.fillStyle = '#0f0f1a';
@@ -899,9 +906,16 @@ function draw() {
     }
 }
 
-function gameLoop() {
-    update();
-    draw();
+function gameLoop(now) {
+    if (!lastTime) lastTime = now;
+    let dt = (now - lastTime) / 1000;
+    
+    // 탭 전환이나 초기 로딩으로 지나치게 큰 dt가 들어올 경우 캡 처리
+    if (dt > 0.1) dt = 0.016; 
+    lastTime = now;
+
+    update(dt);
+    draw(dt);
     requestAnimationFrame(gameLoop);
 }
 
@@ -911,6 +925,9 @@ function resetGame() {
     hp = 100;
     gameOver = false;
     gameFrame = 0;
+    spawnTimer = 0;
+    pitTimer = 0;
+    itemTimer = 0;
     player.y = 360;
     player.vy = 0;
     player.isGiant = false;
@@ -923,7 +940,7 @@ function resetGame() {
 }
 
 updateShopUI();
-gameLoop();
+requestAnimationFrame(gameLoop);
 </script>
 </body>
 </html>
