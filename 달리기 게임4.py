@@ -149,6 +149,12 @@ let gameOver = false;
 let gameRunning = false;
 let gameFrame = 0;
 
+// 속도 제어 변수 (초기 6.0, 최고 12.0까지 상승)
+const BASE_SPEED = 6.0;
+const MAX_SPEED = 12.0;
+let GAME_SPEED = BASE_SPEED;
+let groundDistance = 0;
+
 const clouds = [
     { x: 50, y: 60, speed: 0.5, scale: 1.0 },
     { x: 400, y: 100, speed: 0.3, scale: 1.4 },
@@ -277,7 +283,10 @@ function returnToMenu() {
 }
 
 function spawnObjects() {
-    if (gameFrame % 130 === 0) {
+    // 속도가 빨라지면 스폰 주기도 비례하여 단축하여 간격을 유지
+    let speedRatio = BASE_SPEED / GAME_SPEED;
+    
+    if (gameFrame % Math.floor(130 * speedRatio) === 0) {
         let rand = Math.random();
         let type = rand < 0.4 ? 'spike' : (rand < 0.7 ? 'saw' : 'high_saw');
         
@@ -290,18 +299,18 @@ function spawnObjects() {
         });
     }
 
-    if (gameFrame % 280 === 0 && Math.random() < 0.6) {
+    if (gameFrame % Math.floor(280 * speedRatio) === 0 && Math.random() < 0.6) {
         pits.push({ x: 1000, width: 100 });
     }
 
-    if (gameFrame % 110 === 0) {
+    if (gameFrame % Math.floor(110 * speedRatio) === 0) {
         let rand = Math.random();
         let itemType = rand < 0.20 ? 'heal' : (rand < 0.90 ? 'coin' : 'giant');
         items.push({
             x: 1000,
             y: itemType === 'coin' ? 260 + Math.random() * 80 : 320,
             width: 30,
-            height: 35,
+            height: 30,
             type: itemType
         });
     }
@@ -316,7 +325,7 @@ function drawBackground() {
         ctx.fillRect(0, 0, 1000, 430);
 
         ctx.fillStyle = '#55efc4';
-        let mountainOffset = (gameFrame * 0.5) % 500;
+        let mountainOffset = (groundDistance * 0.08) % 500;
         ctx.beginPath();
         ctx.moveTo(0 - mountainOffset, 430);
         for (let i = -1; i <= 3; i++) {
@@ -358,7 +367,7 @@ function drawBackground() {
         ctx.shadowBlur = 0;
 
         ctx.fillStyle = '#0a192f';
-        let cityOffset = (gameFrame * 0.8) % 350;
+        let cityOffset = (groundDistance * 0.12) % 350;
         for (let i = -1; i < 4; i++) {
             let bx = i * 350 - cityOffset;
             ctx.fillRect(bx + 10, 220, 50, 210);
@@ -391,7 +400,7 @@ function drawBackground() {
         ctx.shadowBlur = 0;
 
         ctx.fillStyle = 'rgba(78, 15, 30, 0.6)';
-        let mountOffset1 = (gameFrame * 0.3) % 700;
+        let mountOffset1 = (groundDistance * 0.05) % 700;
         ctx.beginPath();
         ctx.moveTo(-mountOffset1, 430);
         ctx.lineTo(200 - mountOffset1, 220);
@@ -402,7 +411,7 @@ function drawBackground() {
         ctx.fill();
 
         ctx.fillStyle = '#2c0b0e';
-        let mountOffset2 = (gameFrame * 0.7) % 600;
+        let mountOffset2 = (groundDistance * 0.1) % 600;
         ctx.beginPath();
         ctx.moveTo(-mountOffset2, 430);
         ctx.lineTo(130 - mountOffset2, 300);
@@ -423,7 +432,7 @@ function drawBackground() {
     ctx.fillRect(0, 445, 1000, 55);
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-    let groundLineOffset = (gameFrame * 6) % 50;
+    let groundLineOffset = groundDistance % 50;
     for (let x = -50; x < 1050; x += 50) {
         ctx.fillRect(x - groundLineOffset, 452, 25, 5);
         ctx.fillRect(x - groundLineOffset + 20, 470, 12, 5);
@@ -498,7 +507,7 @@ function drawPlayer() {
         ctx.arc(18 * scale, -12 * scale, 8 * scale, 0, Math.PI * 2);
         ctx.fill();
     } else {
-        let runCycle = gameFrame * 0.2;
+        let runCycle = gameFrame * (0.15 + (GAME_SPEED * 0.015));
         let isAir = player.y < 360;
 
         let bobbing = isAir ? 0 : Math.sin(runCycle * 2) * 4 * scale;
@@ -549,6 +558,12 @@ function update() {
     gameFrame++;
     score++;
 
+    // 매 프레임 속도가 아주 조금씩 상승 (최대 12.0까지)
+    if (GAME_SPEED < MAX_SPEED) {
+        GAME_SPEED += 0.0015;
+    }
+    groundDistance += GAME_SPEED;
+
     if (gameFrame % 10 === 0) {
         hp -= 0.5;
     }
@@ -591,7 +606,7 @@ function update() {
     }
 
     for (let i = pits.length - 1; i >= 0; i--) {
-        pits[i].x -= 6;
+        pits[i].x -= GAME_SPEED;
         if (pits[i].x + pits[i].width < 0) {
             pits.splice(i, 1);
         }
@@ -599,7 +614,7 @@ function update() {
 
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
-        obs.x -= 6;
+        obs.x -= GAME_SPEED;
 
         let currentHeight = player.isSliding ? player.slideHeight : player.height;
         let pBox = {
@@ -631,7 +646,7 @@ function update() {
 
     for (let i = items.length - 1; i >= 0; i--) {
         let item = items[i];
-        item.x -= 6;
+        item.x -= GAME_SPEED;
 
         let currentHeight = player.isSliding ? player.slideHeight : player.height;
         let pBox = {
@@ -878,13 +893,18 @@ function draw() {
             ctx.fillText('$', item.x + 8, item.y + 16);
             ctx.shadowBlur = 0;
         } else if (item.type === 'heal') {
+            ctx.save();
             ctx.fillStyle = '#ff4757';
+            ctx.shadowColor = '#ff6b81';
+            ctx.shadowBlur = 10;
+            let hx = item.x + 15;
+            let hy = item.y + 15;
             ctx.beginPath();
-            ctx.arc(item.x + 15, item.y + 15, 12, 0, Math.PI * 2);
+            ctx.moveTo(hx, hy + 8);
+            ctx.bezierCurveTo(hx - 12, hy - 4, hx - 12, hy - 14, hx, hy - 10);
+            ctx.bezierCurveTo(hx + 12, hy - 14, hx + 12, hy - 4, hx, hy + 8);
             ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(item.x + 13, item.y + 8, 4, 14);
-            ctx.fillRect(item.x + 8, item.y + 13, 14, 4);
+            ctx.restore();
         } else if (item.type === 'giant') {
             ctx.fillStyle = '#a55eea';
             ctx.beginPath();
@@ -904,6 +924,8 @@ function resetGame() {
     sessionCoins = 0;
     hp = 100;
     gameFrame = 0;
+    GAME_SPEED = BASE_SPEED;
+    groundDistance = 0;
     gameOver = false;
     obstacles = [];
     pits = [];
