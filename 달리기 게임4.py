@@ -9,7 +9,7 @@ game_html = """
 <head>
     <meta charset="utf-8">
     <style>
-        body { margin: 0; padding: 0; background-color: #1a1a2e; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; user-select: none; }
+        body { margin: 0; padding: 0; background-color: #1a1a2e; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         #gameContainer { position: relative; width: 1000px; height: 500px; box-shadow: 0 12px 30px rgba(0,0,0,0.7); border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.1); background: #000; }
         
         #gameContainer:fullscreen { width: 100vw; height: 100vh; border-radius: 0; border: none; display: flex; justify-content: center; align-items: center; }
@@ -29,7 +29,7 @@ game_html = """
         .btn { padding: 14px 28px; font-size: 18px; background: linear-gradient(135deg, #2ed573, #26af5f); border: none; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 8px; transition: 0.2s; box-shadow: 0 4px 12px rgba(46, 213, 115, 0.3); }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(46, 213, 115, 0.5); }
         .btn-shop { background: linear-gradient(135deg, #e1b12c, #c89a1c); box-shadow: 0 4px 12px rgba(225, 177, 44, 0.3); }
-        .btn-shop:hover { box-shadow: 0 6px 16px rgba(225, 177, 44, 0.5); }
+        .btn-shop:hover { shadow: 0 6px 16px rgba(225, 177, 44, 0.5); }
         
         #shopScreen { display: none; }
         .shop-container { display: flex; gap: 30px; margin-bottom: 25px; }
@@ -149,12 +149,6 @@ let gameOver = false;
 let gameRunning = false;
 let gameFrame = 0;
 
-// 속도 제어 변수 (초기 6.0, 최고 12.0까지 상승)
-const BASE_SPEED = 6.0;
-const MAX_SPEED = 12.0;
-let GAME_SPEED = BASE_SPEED;
-let groundDistance = 0;
-
 const clouds = [
     { x: 50, y: 60, speed: 0.5, scale: 1.0 },
     { x: 400, y: 100, speed: 0.3, scale: 1.4 },
@@ -188,18 +182,11 @@ let obstacles = [];
 let pits = [];
 let items = [];
 
-function handleJump() {
-    if (!gameRunning || gameOver) return;
-    if (player.jumpCount < player.maxJumps && !player.isSliding) {
-        player.vy = -12.5;
-        player.jumpCount++;
-    }
-}
-
 window.addEventListener('keydown', (e) => {
     if (!gameRunning || gameOver) return;
     if ((e.code === 'Space' || e.code === 'ArrowUp') && player.jumpCount < player.maxJumps && !player.isSliding) {
-        handleJump();
+        player.vy = -12.5;
+        player.jumpCount++;
     }
     if ((e.code === 'ArrowDown' || e.code === 'KeyS') && player.jumpCount === 0) {
         player.isSliding = true;
@@ -210,11 +197,6 @@ window.addEventListener('keyup', (e) => {
     if (e.code === 'ArrowDown' || e.code === 'KeyS') {
         player.isSliding = false;
     }
-});
-
-canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    handleJump();
 });
 
 function saveUserData() {
@@ -283,10 +265,7 @@ function returnToMenu() {
 }
 
 function spawnObjects() {
-    // 속도가 빨라지면 스폰 주기도 비례하여 단축하여 간격을 유지
-    let speedRatio = BASE_SPEED / GAME_SPEED;
-    
-    if (gameFrame % Math.floor(130 * speedRatio) === 0) {
+    if (gameFrame % 130 === 0) {
         let rand = Math.random();
         let type = rand < 0.4 ? 'spike' : (rand < 0.7 ? 'saw' : 'high_saw');
         
@@ -299,18 +278,18 @@ function spawnObjects() {
         });
     }
 
-    if (gameFrame % Math.floor(280 * speedRatio) === 0 && Math.random() < 0.6) {
+    if (gameFrame % 280 === 0 && Math.random() < 0.6) {
         pits.push({ x: 1000, width: 100 });
     }
 
-    if (gameFrame % Math.floor(110 * speedRatio) === 0) {
+    if (gameFrame % 110 === 0) {
         let rand = Math.random();
         let itemType = rand < 0.20 ? 'heal' : (rand < 0.90 ? 'coin' : 'giant');
         items.push({
             x: 1000,
             y: itemType === 'coin' ? 260 + Math.random() * 80 : 320,
             width: 30,
-            height: 30,
+            height: 35,
             type: itemType
         });
     }
@@ -325,7 +304,7 @@ function drawBackground() {
         ctx.fillRect(0, 0, 1000, 430);
 
         ctx.fillStyle = '#55efc4';
-        let mountainOffset = (groundDistance * 0.08) % 500;
+        let mountainOffset = (gameFrame * 0.5) % 500;
         ctx.beginPath();
         ctx.moveTo(0 - mountainOffset, 430);
         for (let i = -1; i <= 3; i++) {
@@ -367,7 +346,7 @@ function drawBackground() {
         ctx.shadowBlur = 0;
 
         ctx.fillStyle = '#0a192f';
-        let cityOffset = (groundDistance * 0.12) % 350;
+        let cityOffset = (gameFrame * 0.8) % 350;
         for (let i = -1; i < 4; i++) {
             let bx = i * 350 - cityOffset;
             ctx.fillRect(bx + 10, 220, 50, 210);
@@ -400,7 +379,7 @@ function drawBackground() {
         ctx.shadowBlur = 0;
 
         ctx.fillStyle = 'rgba(78, 15, 30, 0.6)';
-        let mountOffset1 = (groundDistance * 0.05) % 700;
+        let mountOffset1 = (gameFrame * 0.3) % 700;
         ctx.beginPath();
         ctx.moveTo(-mountOffset1, 430);
         ctx.lineTo(200 - mountOffset1, 220);
@@ -411,7 +390,7 @@ function drawBackground() {
         ctx.fill();
 
         ctx.fillStyle = '#2c0b0e';
-        let mountOffset2 = (groundDistance * 0.1) % 600;
+        let mountOffset2 = (gameFrame * 0.7) % 600;
         ctx.beginPath();
         ctx.moveTo(-mountOffset2, 430);
         ctx.lineTo(130 - mountOffset2, 300);
@@ -432,7 +411,7 @@ function drawBackground() {
     ctx.fillRect(0, 445, 1000, 55);
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-    let groundLineOffset = groundDistance % 50;
+    let groundLineOffset = (gameFrame * 6) % 50;
     for (let x = -50; x < 1050; x += 50) {
         ctx.fillRect(x - groundLineOffset, 452, 25, 5);
         ctx.fillRect(x - groundLineOffset + 20, 470, 12, 5);
@@ -507,7 +486,7 @@ function drawPlayer() {
         ctx.arc(18 * scale, -12 * scale, 8 * scale, 0, Math.PI * 2);
         ctx.fill();
     } else {
-        let runCycle = gameFrame * (0.15 + (GAME_SPEED * 0.015));
+        let runCycle = gameFrame * 0.2;
         let isAir = player.y < 360;
 
         let bobbing = isAir ? 0 : Math.sin(runCycle * 2) * 4 * scale;
@@ -558,12 +537,6 @@ function update() {
     gameFrame++;
     score++;
 
-    // 매 프레임 속도가 아주 조금씩 상승 (최대 12.0까지)
-    if (GAME_SPEED < MAX_SPEED) {
-        GAME_SPEED += 0.0015;
-    }
-    groundDistance += GAME_SPEED;
-
     if (gameFrame % 10 === 0) {
         hp -= 0.5;
     }
@@ -583,7 +556,7 @@ function update() {
 
     if (player.y >= 360) {
         if (overPit) {
-            if (player.y > 480) {
+            if (player.y > 430) {
                 hp = 0;
             }
         } else {
@@ -606,7 +579,7 @@ function update() {
     }
 
     for (let i = pits.length - 1; i >= 0; i--) {
-        pits[i].x -= GAME_SPEED;
+        pits[i].x -= 6;
         if (pits[i].x + pits[i].width < 0) {
             pits.splice(i, 1);
         }
@@ -614,7 +587,7 @@ function update() {
 
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
-        obs.x -= GAME_SPEED;
+        obs.x -= 6;
 
         let currentHeight = player.isSliding ? player.slideHeight : player.height;
         let pBox = {
@@ -646,7 +619,7 @@ function update() {
 
     for (let i = items.length - 1; i >= 0; i--) {
         let item = items[i];
-        item.x -= GAME_SPEED;
+        item.x -= 6;
 
         let currentHeight = player.isSliding ? player.slideHeight : player.height;
         let pBox = {
@@ -728,25 +701,28 @@ function drawObstacle(obs) {
             ctx.arc(0, 0, 7, 0, Math.PI * 2);
             ctx.fill();
         } else if (obs.type === 'high_saw') {
+            // 히트박스 영역(obs.y ~ obs.y + obs.height)에 맞춰서 그래픽 출력 위치 수정
+            let centerY = obs.y + obs.height / 2;
+
             ctx.strokeStyle = '#b2bec3';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(cx, 0);
-            ctx.lineTo(cx, obs.y + 30);
+            ctx.lineTo(cx, centerY);
             ctx.stroke();
 
             ctx.fillStyle = '#636e72';
             ctx.shadowColor = '#2d3436';
             ctx.shadowBlur = 8;
             ctx.beginPath();
-            ctx.arc(cx, obs.y + 40, 22, 0, Math.PI * 2);
+            ctx.arc(cx, centerY, 22, 0, Math.PI * 2);
             ctx.fill();
             ctx.shadowBlur = 0;
 
             ctx.fillStyle = '#d63031';
             for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
                 let sx = cx + Math.cos(a) * 22;
-                let sy = (obs.y + 40) + Math.sin(a) * 22;
+                let sy = centerY + Math.sin(a) * 22;
                 ctx.beginPath();
                 ctx.arc(sx, sy, 4, 0, Math.PI * 2);
                 ctx.fill();
@@ -761,6 +737,7 @@ function drawObstacle(obs) {
             ctx.lineTo(cx, obs.y);
             ctx.lineTo(obs.x + obs.width - 5, obs.y + obs.height);
             ctx.fill();
+
             ctx.fillStyle = '#fff200';
             ctx.fillRect(obs.x + 12, obs.y + 15, obs.width - 24, 6);
             ctx.shadowColor = '#ff3838';
@@ -787,20 +764,22 @@ function drawObstacle(obs) {
             ctx.arc(0, 0, 6, 0, Math.PI * 2);
             ctx.fill();
         } else if (obs.type === 'high_saw') {
+            let centerY = obs.y + obs.height / 2;
+
             ctx.fillStyle = '#3d3d3d';
-            ctx.fillRect(cx - 20, obs.y + 10, 40, 15);
+            ctx.fillRect(cx - 20, centerY - 10, 40, 15);
             ctx.fillStyle = '#718093';
-            ctx.fillRect(cx - 12, obs.y + 5, 24, 6);
+            ctx.fillRect(cx - 12, centerY - 15, 24, 6);
 
             ctx.fillStyle = '#ff3838';
             ctx.shadowColor = '#ff3838';
             ctx.shadowBlur = 8;
             ctx.beginPath();
-            ctx.arc(cx, obs.y + 17, 4, 0, Math.PI * 2);
+            ctx.arc(cx, centerY - 3, 4, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.fillStyle = 'rgba(255, 56, 56, 0.7)';
-            ctx.fillRect(cx - 4, obs.y + 25, 8, obs.height - 25);
+            ctx.fillRect(cx - 4, centerY + 5, 8, obs.height / 2);
             ctx.shadowBlur = 0;
         }
 
@@ -840,23 +819,25 @@ function drawObstacle(obs) {
             ctx.fill();
             ctx.shadowBlur = 0;
         } else if (obs.type === 'high_saw') {
+            let centerY = obs.y + obs.height / 2;
+
             ctx.strokeStyle = '#ffb142';
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(cx, 0);
-            ctx.lineTo(cx, obs.y + 50);
+            ctx.lineTo(cx, centerY);
             ctx.stroke();
 
             ctx.fillStyle = '#cc8e35';
             ctx.shadowColor = '#ff5252';
             ctx.shadowBlur = 12;
             ctx.beginPath();
-            ctx.arc(cx, obs.y + 60, 22, 0, Math.PI * 2);
+            ctx.arc(cx, centerY, 22, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.fillStyle = '#ff5252';
             ctx.beginPath();
-            ctx.arc(cx, obs.y + 60, 14, 0, Math.PI * 2);
+            ctx.arc(cx, centerY, 14, 0, Math.PI * 2);
             ctx.fill();
             ctx.shadowBlur = 0;
         }
@@ -865,7 +846,6 @@ function drawObstacle(obs) {
 }
 
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBackground();
 
     pits.forEach(pit => {
@@ -894,58 +874,75 @@ function draw() {
             ctx.shadowBlur = 0;
         } else if (item.type === 'heal') {
             ctx.save();
-            ctx.fillStyle = '#ff4757';
-            ctx.shadowColor = '#ff6b81';
-            ctx.shadowBlur = 10;
-            let hx = item.x + 15;
-            let hy = item.y + 15;
+            ctx.translate(item.x + 15, item.y + 15);
+            
+            ctx.shadowColor = '#ff4757';
+            ctx.shadowBlur = 12;
+
+            ctx.fillStyle = '#a4b0be';
+            ctx.fillRect(-4, -16, 8, 4);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(-6, -12, 12, 3);
+
             ctx.beginPath();
-            ctx.moveTo(hx, hy + 8);
-            ctx.bezierCurveTo(hx - 12, hy - 4, hx - 12, hy - 14, hx, hy - 10);
-            ctx.bezierCurveTo(hx + 12, hy - 14, hx + 12, hy - 4, hx, hy + 8);
+            ctx.arc(0, 3, 13, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.beginPath();
+            let wave = Math.sin(gameFrame * 0.1) * 2;
+            ctx.arc(0, 3, 11, 0.1 * Math.PI, 0.9 * Math.PI, false);
+            ctx.quadraticCurveTo(0, 3 + wave, -11, 3);
+            ctx.fillStyle = '#ff4757';
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-4, -2, 3, 0, Math.PI * 2);
+            ctx.fill();
+
             ctx.restore();
         } else if (item.type === 'giant') {
-            ctx.fillStyle = '#a55eea';
+            ctx.fillStyle = '#70a1ff';
+            ctx.shadowColor = '#70a1ff';
+            ctx.shadowBlur = 10;
             ctx.beginPath();
-            ctx.arc(item.x + 15, item.y + 15, 12, 0, Math.PI * 2);
+            ctx.arc(item.x + 12, item.y + 12, 12, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 12px sans-serif';
-            ctx.fillText('G', item.x + 10, item.y + 20);
+            ctx.shadowBlur = 0;
         }
     });
 
-    drawPlayer();
-}
-
-function resetGame() {
-    score = 0;
-    sessionCoins = 0;
-    hp = 100;
-    gameFrame = 0;
-    GAME_SPEED = BASE_SPEED;
-    groundDistance = 0;
-    gameOver = false;
-    obstacles = [];
-    pits = [];
-    items = [];
-    player.y = 360;
-    player.vy = 0;
-    player.jumpCount = 0;
-    player.isSliding = false;
-    player.isGiant = false;
-    player.giantTimer = 0;
-    player.invincibleTimer = 0;
-
-    document.getElementById('gameOverScreen').style.display = 'none';
-    updateShopUI();
+    if (gameRunning) {
+        drawPlayer();
+    }
 }
 
 function gameLoop() {
     update();
     draw();
     requestAnimationFrame(gameLoop);
+}
+
+function resetGame() {
+    score = 0;
+    sessionCoins = 0;
+    hp = 100;
+    gameOver = false;
+    gameFrame = 0;
+    player.y = 360;
+    player.vy = 0;
+    player.isGiant = false;
+    player.giantTimer = 0;
+    player.invincibleTimer = 0;
+    obstacles = [];
+    pits = [];
+    items = [];
+    document.getElementById('gameOverScreen').style.display = 'none';
 }
 
 updateShopUI();
@@ -955,4 +952,4 @@ gameLoop();
 </html>
 """
 
-components.html(game_html, height=520)
+components.html(game_html, height=550)
